@@ -1,3 +1,7 @@
 **/*.zip
+**/*.swp
+__pycache__/*
 notes.txt
 env/*
+*.png
+*.dot

@@ -1,0 +1,106 @@
+import os
+import csv
+import json
+
+from Dataset import DatasetSchema, Dataset
+
+# dataset field types ( excluding the first field which is user id )
+field_types = [str, int, str, str, int, int, float, str, int, bool, bool]
+
+def process_dataset(args):
+    dataset = load_dataset(args.dataset)
+    testset, trainset = create_test_and_train_set(dataset, args.ratio)
+
+    save_dataset(args.trainset_outfile, testset)
+    save_dataset(args.testset_outfile, trainset)
+
+def save_dataset(file_path, dataset):
+    out_path = os.path.normpath(file_path)
+    directory, filename = os.path.split(out_path)
+
+    if directory != '' and not os.path.exists(directory):
+        os.makedirs(directory)
+
+    with open(out_path, "w+") as outfile:
+        json.dump(dataset, outfile)
+
+def field_exists_in_dict(_dict, field):
+    if (
+        (not field in _dict) or
+        (_dict[field] == None) or
+        (len(_dict[field]) == 0)
+    ):
+        return False
+
+    return True
+
+def verify_dataset_format(dataset_contents):
+    return (field_exists_in_dict(dataset_contents, "instances") and
+            field_exists_in_dict(dataset_contents, "field_names"))
+
+def load_dataset(dataset_filepath):
+    global field_types
+
+    norm_path = os.path.normpath(dataset_filepath)
+    directory, filename = os.path.split(norm_path)
+
+    filename_noext, file_ext = os.path.splitext(filename)
+
+    dataset_contents = None
+
+    try:
+        if file_ext == '.csv':
+            with open(dataset_filepath) as csvfile:
+                reader = csv.reader(csvfile, delimiter=',')
+                dataset_contents = list(reader)
+
+                DatasetSchema.configure_schema(dataset_contents, field_types)
+
+                dataset = Dataset([instance[1:] for instance in dataset_contents[1:]])
+
+        elif file_ext == '.json':
+            dataset_contents = json.load(open(dataset_filepath))
+
+            if not verify_dataset_format(dataset_contents):
+                print("[ERROR] Malformed dataset")
+                exit(1)
+
+            DatasetSchema.configure_schema(dataset_contents, field_types)
+
+            dataset = Dataset(dataset_contents['instances'])
+        elif file_ext == '':
+            print(f"[ERROR] Dataset file extension should be '.json' or '.csv'")
+            exit(1)
+        else:
+            print(f"[ERROR] Supplied dataset file has unsupported extension: {filename}")
+            exit(1)
+    except FileNotFoundError as e:
+        print(f"[ERROR]{re.sub(r'\[Errno [0-9]+\]', '', str(e))}")
+        #print(f"[ERROR] {e.__class__.__name__} {getattr(e, 'message', e)}")
+        exit(1)
+
+    return dataset
+
+def create_test_and_train_set(dataset, ratio):
+    x = []
+
+    for i in dataset.instances:
+        x.append([getattr(i, name) for name in dataset.field_names[:-1]])
+
+    y = [getattr(i, dataset.field_names[-1]) for i in dataset.instances]
+
+    # returns -> x train, x test, y train, y test
+    # 1186 active, 414 churned in test instances (25.9%) churned
+    # 4743 active, 1657 churned in training instances (25.6%) churned
+    split = train_test_split(x, y, train_size = 1 - ratio, test_size = ratio, stratify=y)
+
+    trainset = { "instances": [], "field_names": dataset.field_names }
+    testset = { "instances": [], "field_names": dataset.field_names }
+
+    for i in range(len(split[0])):
+        trainset["instances"].append( split[0][i] + [split[2][i]] )
+
+    for i in range(len(split[1])):
+        testset["instances"].append( split[0][i] + [split[2][i]] )
+
+    return (testset, trainset)
