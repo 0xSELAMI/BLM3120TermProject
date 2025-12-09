@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import re
 import sys
 import argparse
 
@@ -59,6 +58,11 @@ def create_decision_tree_argparser(parsers, subparsers):
     parsers["decision_tree"]["evaluate_tree"].add_argument("--pickle-path", "-p", metavar='PICKLE_FILEPATH', help=f"Path to pickled decision tree (default: {default_pickle_path})", default=default_pickle_path, type=str)
     parsers["decision_tree"]["evaluate_tree"].add_argument("--testset-infile", "-i", metavar='TESTSET_FILEPATH', help="default: dataset/testset.json", default="dataset/testset.json", type=str)
 
+def create_naive_bayesian_argparser(parsers, subparsers):
+    parsers["naive_bayesian"] = subparsers.add_parser("naive_bayesian", description="WIP", help="WIP")
+
+def create_CAR_argparser(parsers, subparsers):
+    parsers["CAR"] = subparsers.add_parser("CAR", description="WIP", help="WIP")
 
 def main():
     parser = argparse.ArgumentParser(
@@ -80,6 +84,8 @@ def main():
     # common_parser.add_argument("--trainset-infile", metavar='TRAINSET_FILEPATH', help="default: dataset/trainset.json", default="dataset/trainset.json", type=str)
 
     create_decision_tree_argparser(parsers, subparsers)
+    create_naive_bayesian_argparser(parsers, subparsers)
+    create_CAR_argparser(parsers, subparsers)
 
     args = parser.parse_args()
 
@@ -92,6 +98,12 @@ def main():
             evaluate_decision_tree(args)
         else:
             parsers["decision_tree"]["main_parser"].print_help()
+    elif args.command == "naive_bayesian":
+        # TODO
+        pass
+    elif args.command == "CAR":
+        # TODO
+        pass
     else:
         parser.print_help()
 

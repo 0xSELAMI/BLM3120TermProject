@@ -1,9 +1,5 @@
 class Instance:
     def __init__(self, features):
-        if len(list(features.keys())) != 11:
-            print('[ERROR] Invalid instance initialization')
-            return None
-
         self.field_names = list(features.keys())
 
         for key in features:
