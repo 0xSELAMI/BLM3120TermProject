@@ -2,18 +2,21 @@ import math
 
 from collections import Counter
 
-from Instance import Instance
-from Features import FeatureType, FeatureFilter
+from common.Instance import Instance
+from common.Features import FeatureType, FeatureFilter
 
 class DatasetSchema:
-    feature_types = None
+    feature_types   = None
+    entropy_weights = None
 
     def __init__(self):
-        if DatasetSchema.feature_types is None:
+        if DatasetSchema.feature_types is None or DatasetSchema.entropy_weights is None:
             raise ValueError("Dataset Schema is not configured")
 
     @staticmethod
-    def configure_schema(dataset_contents, field_types):
+    def configure_schema(dataset_contents, field_types, entropy_weights):
+        DatasetSchema.entropy_weights = entropy_weights
+
         if type(dataset_contents) == list:
             # getting field names from first line and
             # trimming user_id's from the rest of the instances
@@ -39,6 +42,7 @@ class Dataset(DatasetSchema):
 
         self.majority_label = None
         self.entropy        = None
+        self.gini           = None
         self.value_domains  = None
         self.instances      = []
         self.size           = 0
@@ -66,8 +70,9 @@ class Dataset(DatasetSchema):
 
         if not self.is_empty:
             self.majority_label = self.calc_majority_label()
-            self.entropy = self.calc_binary_label_entropy()
-            self.value_domains = self.compute_value_domains()
+            self.entropy        = self.calc_binary_label_entropy(self.entropy_weights)
+            self.gini           = self.calc_binary_label_gini()
+            self.value_domains  = self.compute_value_domains()
 
     @property
     def is_empty(self):
@@ -76,6 +81,14 @@ class Dataset(DatasetSchema):
     @property
     def is_pure(self):
         return True if self.is_empty else (self.majority_label[1] == self.size)
+    
+    @property
+    def count_label_true(self):
+        return (self.size - self.majority_label[1]) if self.majority_label[0] == False else self.majority_label[1]
+    
+    @property
+    def count_label_false(self):
+        return (self.size - self.count_label_true)
 
     def compute_value_domains(self):
         domains = {name: set() for name in self.feature_types.keys()}
@@ -103,19 +116,26 @@ class Dataset(DatasetSchema):
             str += '\n'
 
         return str[:-1]
-        
 
     def calc_majority_label(self):
         counts = Counter(getattr(inst, list(self.feature_types.keys())[-1]) for inst in self.instances)
         return counts.most_common()[0]
 
-    def calc_binary_label_entropy(self):
+    def calc_binary_label_entropy(self, weights):
         if self.is_pure:
             return 0
 
         # majority label: [0] is value, [1] is count of value
-        prob = self.majority_label[1] / self.size
-        return -( (prob * math.log2(prob)) + ((1 - prob) * math.log2(1 - prob)) )
+        prob = self.count_label_true / self.size
+        return -( (weights[0] * prob * math.log2(prob)) + (weights[1] * (1 - prob) * math.log2(1 - prob)) )
+    
+    def calc_binary_label_gini(self):
+        if self.is_empty:
+            return 0.0
+
+        p = self.count_label_true / self.size
+
+        return 2 * p * (1 - p)
     
     @classmethod
     def subset_with_feature_filter(cls, dataset, feature_filters):

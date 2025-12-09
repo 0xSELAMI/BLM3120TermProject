@@ -2,10 +2,18 @@ import os
 import csv
 import json
 
-from Dataset import DatasetSchema, Dataset
+from common.Dataset import DatasetSchema, Dataset
 
 # dataset field types ( excluding the first field which is user id )
 field_types = [str, int, str, str, int, int, float, str, int, bool, bool]
+
+def move_cursor_up_and_clear_line(times):
+    cursorup = '\033[F'
+    clear    = '\033[K'
+
+    for _ in range(times):
+        print(cursorup+clear, end='')
+
 
 def process_dataset(args):
     dataset = load_dataset(args.dataset)
@@ -38,7 +46,7 @@ def verify_dataset_format(dataset_contents):
     return (field_exists_in_dict(dataset_contents, "instances") and
             field_exists_in_dict(dataset_contents, "field_names"))
 
-def load_dataset(dataset_filepath):
+def load_dataset(dataset_filepath, entropy_weights = [1.0, 1.0]):
     global field_types
 
     norm_path = os.path.normpath(dataset_filepath)
@@ -54,7 +62,7 @@ def load_dataset(dataset_filepath):
                 reader = csv.reader(csvfile, delimiter=',')
                 dataset_contents = list(reader)
 
-                DatasetSchema.configure_schema(dataset_contents, field_types)
+                DatasetSchema.configure_schema(dataset_contents, field_types, entropy_weights)
 
                 dataset = Dataset([instance[1:] for instance in dataset_contents[1:]])
 
@@ -65,7 +73,7 @@ def load_dataset(dataset_filepath):
                 print("[ERROR] Malformed dataset")
                 exit(1)
 
-            DatasetSchema.configure_schema(dataset_contents, field_types)
+            DatasetSchema.configure_schema(dataset_contents, field_types, entropy_weights)
 
             dataset = Dataset(dataset_contents['instances'])
         elif file_ext == '':
@@ -76,7 +84,6 @@ def load_dataset(dataset_filepath):
             exit(1)
     except FileNotFoundError as e:
         print(f"[ERROR]{re.sub(r'\[Errno [0-9]+\]', '', str(e))}")
-        #print(f"[ERROR] {e.__class__.__name__} {getattr(e, 'message', e)}")
         exit(1)
 
     return dataset
