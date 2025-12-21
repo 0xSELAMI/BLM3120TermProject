@@ -1,5 +1,5 @@
 # from common.Dataset import Dataset
-from common.Utils import load_dataset, move_cursor_up_and_clear_line
+from common.Utils import load_dataset, move_cursor_up_and_clear_line, save_pickle, load_pickle
 
 import decision_tree.DecisionTreeHelpers as helpers
 import decision_tree.TreeBuilder as tree_builder
@@ -109,19 +109,22 @@ def build_decision_tree(args):
     trainset = load_dataset(args.trainset_infile, args.entropy_weights)
 
     print("Building decision tree...", end = '\n\n')
-    root = tree_builder.build_tree(trainset)
-    move_cursor_up_and_clear_line(2)
-    print("Building decision tree... Completed Successfully")
-    print("Collapsing pure subtrees into leaves...")
-    tree_builder.collapse_pure_subtrees(root)
+    try:
+        root = tree_builder.build_tree(trainset)
+        move_cursor_up_and_clear_line(2)
+        print("Building decision tree... Completed Successfully")
+        print("Collapsing pure subtrees into leaves...")
+        tree_builder.collapse_pure_subtrees(root)
 
-    helpers.export_tree_to_dot(root, args.dot_outfile)
-    helpers.pickle_decision_tree(root, args.pickle_path)
+        helpers.export_tree_to_dot(root, args.dot_outfile)
+        save_pickle(root, args.pickle_path, "decision tree")
+    except KeyboardInterrupt:
+        print("Received KeyboardInterrupt, exiting.")
 
 def evaluate_decision_tree(args):
     testset  = load_dataset(args.testset_infile)
 
-    root = helpers.load_pickled_decision_tree(args.pickle_path)
+    root = load_pickle(args.pickle_path)
 
     predictions = predict_dataset(root, testset)
 

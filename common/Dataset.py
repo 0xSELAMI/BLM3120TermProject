@@ -40,12 +40,21 @@ class Dataset(DatasetSchema):
     def __init__(self, instance_array):
         super().__init__()
 
-        self.majority_label = None
-        self.entropy        = None
-        self.gini           = None
-        self.value_domains  = None
-        self.instances      = []
-        self.size           = 0
+        self.majority_label  = None
+        self.entropy         = None
+        self.gini            = None
+        self.value_domains   = None
+
+        # the feature name that the dataset was sorted on,
+        # e.g "age", used for numeric feature discretization
+        self.sorted_on       = None
+        
+        # positive_counts[i] means the count of churned instances until that index
+        # only meaningful on a sorted dataset to be used for numeric feature discretization
+        self.positive_counts = None
+
+        self.instances       = []
+        self.size            = 0
 
         if not instance_array or len(instance_array) == 0:
             return
@@ -137,6 +146,38 @@ class Dataset(DatasetSchema):
 
         return 2 * p * (1 - p)
     
+    def calc_positive_counts(self):
+        labels = [1 if instance.is_churned else 0 for instance in self.instances]
+
+        pos = [0] * (len(labels) + 1)
+
+        for i in range(1, len(labels) + 1):
+            pos[i] = pos[i - 1] + labels[i - 1]
+
+        self.positive_counts = pos
+
+    def calc_segment_cost(self, i, j):
+        seg_size = j - i + 1
+
+        if seg_size == 0:
+            return 0
+
+        seg_pos_count = self.positive_counts[j + 1] - self.positive_counts[i]
+        seg_neg_count = seg_size - seg_pos_count
+
+        seg_entropy = 0
+
+        prob_pos = seg_pos_count / seg_size
+        prob_neg = seg_neg_count / seg_size
+
+        if (prob_pos != 0) and (prob_neg != 1):
+            seg_entropy = -(
+                self.entropy_weights[0] * prob_pos * math.log2(prob_pos) +
+                self.entropy_weights[1] * prob_neg * math.log2(prob_neg)
+            )
+
+        return (seg_size / self.size) * seg_entropy
+    
     @classmethod
     def subset_with_feature_filter(cls, dataset, feature_filters):
         instance_array = []
@@ -154,6 +195,12 @@ class Dataset(DatasetSchema):
                     instance_array.append(instance)
 
         return cls(instance_array)
+    
+    @classmethod
+    def sort_on_feature(cls, dataset, feature_name):
+        ret = cls(sorted(dataset.instances, key = lambda inst : getattr(inst, feature_name)))
+        ret.sorted_on = feature_name
+        return(ret)
 
     def __repr__(self):
         str = ""

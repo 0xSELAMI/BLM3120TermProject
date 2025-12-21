@@ -1,6 +1,7 @@
 import os
 import csv
 import json
+import pickle
 
 from common.Dataset import DatasetSchema, Dataset
 
@@ -111,3 +112,27 @@ def create_test_and_train_set(dataset, ratio):
         testset["instances"].append( split[0][i] + [split[2][i]] )
 
     return (testset, trainset)
+
+def save_pickle(data, pickle_outfile, datatype):
+    out_path = os.path.normpath(pickle_outfile)
+    directory, filename = os.path.split(out_path)
+
+    if directory != '' and not os.path.exists(directory):
+        os.makedirs(directory)
+
+    with open(out_path, "wb+") as f:
+        pickle.dump(data, f)
+
+    print(f"Pickled {datatype} into file: {out_path}")
+
+def load_pickle(pickle_infile):
+    data = None
+
+    try:
+        with open(pickle_infile, "rb") as f:
+            data = pickle.load(f)
+    except FileNotFoundError:
+        print(f"File {pickle_infile} not found")
+        exit(1)
+
+    return data

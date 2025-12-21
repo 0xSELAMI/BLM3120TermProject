@@ -45,7 +45,7 @@ class FeatureFilter:
 
         if (self.feature_type.value != type(self.value) and
             not (self.feature_type.value == int and type(self.value) == float)):
-            raise ValueError(f"{e}, Incompatible Feature Filter Value used with Feature: {self}")
+            raise ValueError(f"Incompatible Feature Filter Value used with Feature: {self}")
 
     def _not(self):
         inverse = {

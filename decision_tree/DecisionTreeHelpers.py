@@ -2,6 +2,7 @@ import os
 import pickle
 
 from common.Dataset import Dataset
+from common.Helpers import calc_candidate_thresholds
 
 # I think we don't need to import the types we don't create new instances of
 
@@ -10,24 +11,6 @@ from common.Dataset import Dataset
 
 MIN_SAMPLES_LEAF = None
 MIN_SAMPLES_LEAF_KARY = None
-
-def calc_candidate_thresholds(dataset, feature_type):
-    if not feature_type.is_numeric:
-        raise ValueError(f"non-numeric feature type supplied to candidate threshold calculation: {feature_type}")
-
-    unique_values = set()
-
-    for instance in dataset.instances:
-        unique_values.add(getattr(instance, feature_type.name))
-
-    unique_values = sorted(unique_values)
-
-    candidates = []
-
-    for i in range(len(unique_values) - 1):
-        candidates.append( (unique_values[i] + unique_values[i + 1]) / 2 )
-
-    return candidates
 
 def calc_info_gain_on_binary_split(parentset, feature_filter, use_gini=False):
     right = Dataset.subset_with_feature_filter(parentset, [feature_filter])
@@ -184,27 +167,3 @@ def export_tree_to_dot(root, dot_outfile):
         f.write("\n".join(lines))
 
     print(f"Exported tree as DOT to {out_path}")
-
-def pickle_decision_tree(root_node, pickle_outfile):
-    out_path = os.path.normpath(pickle_outfile)
-    directory, filename = os.path.split(out_path)
- 
-    if directory != '' and not os.path.exists(directory):
-        os.makedirs(directory)
- 
-    with open(out_path, "wb+") as f:
-        pickle.dump(root_node, f)
-
-    print(f"Pickled the decision tree into file: {out_path}")
-
-def load_pickled_decision_tree(pickle_infile):
-    root = None
-
-    try:
-        with open(pickle_infile, "rb") as f:
-            root = pickle.load(f)
-    except FileNotFoundError:
-        print(f"File {pickle_infile} not found")
-        exit(1)
-
-    return root
