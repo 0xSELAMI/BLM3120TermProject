@@ -78,6 +78,7 @@ class Dataset(DatasetSchema):
         self.size = len(self.instances)
 
         if not self.is_empty:
+            # majority label: [0] is value, [1] is count of value
             self.majority_label = self.calc_majority_label()
             self.entropy        = self.calc_binary_label_entropy(self.entropy_weights)
             self.gini           = self.calc_binary_label_gini()
@@ -127,6 +128,7 @@ class Dataset(DatasetSchema):
         return str[:-1]
 
     def calc_majority_label(self):
+        # majority label: [0] is value, [1] is count of value
         counts = Counter(getattr(inst, list(self.feature_types.keys())[-1]) for inst in self.instances)
         return counts.most_common()[0]
 
@@ -134,7 +136,6 @@ class Dataset(DatasetSchema):
         if self.is_pure:
             return 0
 
-        # majority label: [0] is value, [1] is count of value
         prob = self.count_label_true / self.size
         return -( (weights[0] * prob * math.log2(prob)) + (weights[1] * (1 - prob) * math.log2(1 - prob)) )
     
@@ -159,7 +160,7 @@ class Dataset(DatasetSchema):
     def calc_segment_cost(self, i, j):
         seg_size = j - i + 1
 
-        if seg_size == 0:
+        if seg_size == 0 or self.is_empty:
             return 0
 
         seg_pos_count = self.positive_counts[j + 1] - self.positive_counts[i]
@@ -170,7 +171,7 @@ class Dataset(DatasetSchema):
         prob_pos = seg_pos_count / seg_size
         prob_neg = seg_neg_count / seg_size
 
-        if (prob_pos != 0) and (prob_neg != 1):
+        if (prob_pos != 0) and (prob_neg != 0):
             seg_entropy = -(
                 self.entropy_weights[0] * prob_pos * math.log2(prob_pos) +
                 self.entropy_weights[1] * prob_neg * math.log2(prob_neg)

@@ -4,11 +4,6 @@ import pickle
 from common.Dataset import Dataset
 from common.Helpers import calc_candidate_thresholds
 
-# I think we don't need to import the types we don't create new instances of
-
-# from common.Features import FeatureType, FeatureFilter
-# from decision_tree.TreeNode import TreeNode
-
 MIN_SAMPLES_LEAF = None
 MIN_SAMPLES_LEAF_KARY = None
 

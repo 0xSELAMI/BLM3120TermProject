@@ -14,7 +14,7 @@ from common.Utils import save_dataset, load_dataset, process_dataset, create_tes
 
 from decision_tree.DecisionTree import build_decision_tree, evaluate_decision_tree
 
-from CAR.CAR import generate_CARs, evaluate_CARs
+from CBA.CBA import generate_CARs, evaluate_CARs
 
 default_trainset_path = "dataset/trainset.json"
 default_testset_path = "dataset/testset.json"
@@ -53,58 +53,62 @@ def create_decision_tree_argparser(parsers, subparsers):
 
     default_pickle_path = "decision_tree/decisiontree.pickle"
 
-    parsers["decision_tree"]["build_tree"] = decision_tree_subparsers.add_parser("build_tree", description=build_desc, help=build_desc)
-    parsers["decision_tree"]["build_tree"].add_argument("--use-gini", action='store_true', help=f"Use Gini impurity instead of entropy (default: {default_use_gini})", default=default_use_gini)
-    parsers["decision_tree"]["build_tree"].add_argument("--entropy-weights", "-e", nargs=2, metavar=('WEIGHT_TRUE', 'WEIGHT_FALSE'), help=f"Entropy weights for true and false labels respectively (default: {default_entropy_weights})", default=default_entropy_weights, type=float)
-    parsers["decision_tree"]["build_tree"].add_argument("--max-depth", metavar='MAX_DEPTH', help=f"Max decision tree depth (default: {default_max_depth})", default=default_max_depth, type=int)
-    parsers["decision_tree"]["build_tree"].add_argument("--min-info-gain", "-g", metavar='MIN_INFO_GAIN', help=f"Minimum info gain for a split to qualify as one (default: {default_min_info_gain})", default=default_min_info_gain, type=float)
-    parsers["decision_tree"]["build_tree"].add_argument("--min-samples-split", metavar='MIN_SAMPLES_SPLIT', help=f"Minimum samples a meaningful split should have (default: {default_min_samples_split})", default=default_min_samples_split, type=int)
-    parsers["decision_tree"]["build_tree"].add_argument("--min-samples-leaf", metavar='MIN_SAMPLES_LEAF', help=f"Minimum samples a leaf node should have (default: {default_min_samples_leaf})", default=default_min_samples_leaf, type=int)
-    parsers["decision_tree"]["build_tree"].add_argument("--min-samples-leaf-kary", metavar='MIN_SAMPLES_LEAF_KARY', help=f"Minimum samples a leaf node of a k-ary node should have (default: {default_min_samples_leaf_kary})", default=default_min_samples_leaf_kary, type=int)
-    parsers["decision_tree"]["build_tree"].add_argument("--dot-outfile", "-o", metavar='DOT_OUTPUT_FILEPATH', help=f"Path to write the dotfile of the decision tree to (default: {default_dot_outfile})", default=default_dot_outfile, type=str)
-    parsers["decision_tree"]["build_tree"].add_argument("--pickle-path", "-p", metavar='PICKLE_FILEPATH', help=f"Path to pickle the decision tree to (default: {default_pickle_path})", default=default_pickle_path, type=str)
-    parsers["decision_tree"]["build_tree"].add_argument("--trainset-infile", "-i", metavar='TRAINSET_FILEPATH', help=f"default: {default_trainset_path}", default=default_trainset_path, type=str)
+    parsers["decision_tree"]["build"] = decision_tree_subparsers.add_parser("build", description=build_desc, help=build_desc)
+    parsers["decision_tree"]["build"].add_argument("--use-gini", action='store_true', help=f"Use Gini impurity instead of entropy (default: {default_use_gini})", default=default_use_gini)
+    parsers["decision_tree"]["build"].add_argument("--entropy-weights", "-e", nargs=2, metavar=('WEIGHT_TRUE', 'WEIGHT_FALSE'), help=f"Entropy weights for true and false labels respectively (default: {default_entropy_weights})", default=default_entropy_weights, type=float)
+    parsers["decision_tree"]["build"].add_argument("--max-depth", metavar='MAX_DEPTH', help=f"Max decision tree depth (default: {default_max_depth})", default=default_max_depth, type=int)
+    parsers["decision_tree"]["build"].add_argument("--min-info-gain", "-g", metavar='MIN_INFO_GAIN', help=f"Minimum info gain for a split to qualify as one (default: {default_min_info_gain})", default=default_min_info_gain, type=float)
+    parsers["decision_tree"]["build"].add_argument("--min-samples-split", metavar='MIN_SAMPLES_SPLIT', help=f"Minimum samples a meaningful split should have (default: {default_min_samples_split})", default=default_min_samples_split, type=int)
+    parsers["decision_tree"]["build"].add_argument("--min-samples-leaf", metavar='MIN_SAMPLES_LEAF', help=f"Minimum samples a leaf node should have (default: {default_min_samples_leaf})", default=default_min_samples_leaf, type=int)
+    parsers["decision_tree"]["build"].add_argument("--min-samples-leaf-kary", metavar='MIN_SAMPLES_LEAF_KARY', help=f"Minimum samples a leaf node of a k-ary node should have (default: {default_min_samples_leaf_kary})", default=default_min_samples_leaf_kary, type=int)
+    parsers["decision_tree"]["build"].add_argument("--dot-outfile", "-o", metavar='DOT_OUTPUT_FILEPATH', help=f"Path to write the dotfile of the decision tree to (default: {default_dot_outfile})", default=default_dot_outfile, type=str)
+    parsers["decision_tree"]["build"].add_argument("--pickle-path", "-p", metavar='PICKLE_FILEPATH', help=f"Path to pickle the decision tree to (default: {default_pickle_path})", default=default_pickle_path, type=str)
+    parsers["decision_tree"]["build"].add_argument("--trainset-infile", "-i", metavar='TRAINSET_FILEPATH', help=f"default: {default_trainset_path}", default=default_trainset_path, type=str)
 
 
-    parsers["decision_tree"]["evaluate_tree"] = decision_tree_subparsers.add_parser("evaluate_tree", description=eval_desc, help=eval_desc)
-    parsers["decision_tree"]["evaluate_tree"].add_argument("--pickle-path", "-p", metavar='PICKLE_FILEPATH', help=f"Path to pickled decision tree (default: {default_pickle_path})", default=default_pickle_path, type=str)
-    parsers["decision_tree"]["evaluate_tree"].add_argument("--testset-infile", "-i", metavar='TESTSET_FILEPATH', help=f"default: {default_testset_path}", default=default_testset_path, type=str)
+    parsers["decision_tree"]["evaluate"] = decision_tree_subparsers.add_parser("evaluate", description=eval_desc, help=eval_desc)
+    parsers["decision_tree"]["evaluate"].add_argument("--pickle-path", "-p", metavar='PICKLE_FILEPATH', help=f"Path to pickled decision tree (default: {default_pickle_path})", default=default_pickle_path, type=str)
+    parsers["decision_tree"]["evaluate"].add_argument("--testset-infile", "-i", metavar='TESTSET_FILEPATH', help=f"default: {default_testset_path}", default=default_testset_path, type=str)
 
-def create_CAR_argparser(parsers, subparsers):
-    # default_use_gini              = False
+def create_CBA_argparser(parsers, subparsers):
     default_entropy_weights = [3.0, 1.0]
-    default_max_split_count = 5
+    default_max_split_count = 3
     default_min_bin_frac    = 0.1
-    default_delta_cost      = 0.03
+    default_delta_cost      = 1e-3
 
-    default_max_k           = 3
-    default_min_support     = 0.05
-    default_min_confidence  = 0.8
+    default_max_k           = 4
+    default_min_support     = 1e-3
+    default_min_confidence  = 0.27
+    default_min_lift        = 1.20
+    default_error_weights   = [1.0, 1.5] # a false negative is %50 worse than a false positive
 
-    default_pickle_path = "CAR/rules.pickle"
+    default_pickle_path = "CBA/rules.pickle"
 
-    main_desc     = "Generate CARs (Class Association Rules) or evaluate CARs"
-    generate_desc = "Generate CARs (Class Association Rules) and save into a pickle file"
-    eval_desc     = "Evaluate the supplied CARs using the test set"
+    main_desc     = "Generate a CAR (Class Association Rule) classifier or evaluate a CAR classifier"
+    generate_desc = "Generate a classifier and save into a pickle file"
+    eval_desc     = "Evaluate the supplied classifier using the test set"
 
-    parsers["CAR"]                = {}
-    parsers["CAR"]["main_parser"] = subparsers.add_parser("CAR", description=main_desc, help=main_desc)
+    parsers["CBA"]                = {}
+    parsers["CBA"]["main_parser"] = subparsers.add_parser("CBA", description=main_desc, help=main_desc)
 
-    CAR_subparsers = parsers["CAR"]["main_parser"].add_subparsers(title="commands", dest="subcommand_CAR")
+    CBA_subparsers = parsers["CBA"]["main_parser"].add_subparsers(title="commands", dest="subcommand_CBA")
 
-    parsers["CAR"]["gen"] = CAR_subparsers.add_parser("generate", description=generate_desc, help=generate_desc)
-    parsers["CAR"]["gen"].add_argument("--trainset-infile", metavar='TRAINSET_FILEPATH', help=f"default: {default_trainset_path}", default=default_trainset_path, type=str)
-    parsers["CAR"]["gen"].add_argument("--pickle-path", metavar='PICKLE_PATH', help=f"default: {default_pickle_path}", default=default_pickle_path, type=str)
-    parsers["CAR"]["gen"].add_argument("--entropy-weights", "-e", nargs=2, metavar=('WEIGHT_TRUE', 'WEIGHT_FALSE'), help=f"Entropy weights to use for true and false labels respectively while discretizing numeric features (default: {default_entropy_weights})", default=default_entropy_weights, type=float)
-    parsers["CAR"]["gen"].add_argument("--max-split-count", "-m", metavar='MAX_SPLIT_COUNT', help=f"Max split count to consider while discretizing numeric features (default: {default_max_split_count})", default=default_max_split_count, type=int)
-    parsers["CAR"]["gen"].add_argument("--min-bin-frac", metavar='MIN_BIN_FRACTION', help=f"Minimum fraction of the training dataset a bin should cover while discretizing numeric features into multiple bins (default: {default_min_bin_frac})", default=default_min_bin_frac, type=float)
-    parsers["CAR"]["gen"].add_argument("--delta_cost", metavar='DELTA_COST', help=f"Minimum cost difference adding a new bin should make while discretizing numeric features into multiple bins (default: {default_delta_cost})", default=default_delta_cost, type=float)
-    parsers["CAR"]["gen"].add_argument("--max-k", metavar='MAX_K', help=f"Max k value for the apriori algorithm (default: {default_max_k})", default=default_max_k, type=int)
-    parsers["CAR"]["gen"].add_argument("--min-support", metavar='MIN_SUP', help=f"Minimum support for the CARs (default: {default_min_support})", default=default_min_support, type=float)
-    parsers["CAR"]["gen"].add_argument("--min-confidence", metavar='MIN_CONF', help=f"Minimum confidence for the CARs (default: {default_min_confidence})", default=default_min_confidence, type=float)
+    parsers["CBA"]["gen"] = CBA_subparsers.add_parser("generate", description=generate_desc, help=generate_desc)
+    parsers["CBA"]["gen"].add_argument("--trainset-infile", metavar='TRAINSET_FILEPATH', help=f"default: {default_trainset_path}", default=default_trainset_path, type=str)
+    parsers["CBA"]["gen"].add_argument("--pickle-path", metavar='PICKLE_PATH', help=f"default: {default_pickle_path}", default=default_pickle_path, type=str)
+    parsers["CBA"]["gen"].add_argument("--entropy-weights", nargs=2, metavar=('WEIGHT_TRUE', 'WEIGHT_FALSE'), help=f"Entropy weights to use for true and false labels respectively while discretizing numeric features (default: {default_entropy_weights})", default=default_entropy_weights, type=float)
+    parsers["CBA"]["gen"].add_argument("--max-split-count", "-m", metavar='MAX_SPLIT_COUNT', help=f"Max split count to consider while discretizing numeric features (default: {default_max_split_count})", default=default_max_split_count, type=int)
+    parsers["CBA"]["gen"].add_argument("--min-bin-frac", metavar='MIN_BIN_FRACTION', help=f"Minimum fraction of the training dataset a bin should cover while discretizing numeric features into multiple bins (default: {default_min_bin_frac})", default=default_min_bin_frac, type=float)
+    parsers["CBA"]["gen"].add_argument("--delta-cost", metavar='DELTA_COST', help=f"Minimum cost difference adding a new bin should make while discretizing numeric features into multiple bins (default: {default_delta_cost})", default=default_delta_cost, type=float)
+    parsers["CBA"]["gen"].add_argument("--max-k", metavar='MAX_K', help=f"Max k value for the apriori algorithm (default: {default_max_k})", default=default_max_k, type=int)
+    parsers["CBA"]["gen"].add_argument("--min-support", metavar='MIN_SUP', help=f"Minimum support for the CARs (default: {default_min_support})", default=default_min_support, type=float)
+    parsers["CBA"]["gen"].add_argument("--min-confidence", metavar='MIN_CONF', help=f"Minimum confidence for the CARs (default: {default_min_confidence})", default=default_min_confidence, type=float)
+    parsers["CBA"]["gen"].add_argument("--min-lift", metavar='MIN_LIFT', help=f"Minimum lift for the CARs (default: {default_min_lift})", default=default_min_lift, type=float)
+    parsers["CBA"]["gen"].add_argument("--error-weights", nargs=2, metavar=('WEIGHT_FALSE_POSITIVES', 'WEIGHT_FALSE_NEGATIVES'), help=f"The weights to use for penalizing rules that incorrectly cover instances while building CAR classifier (default: {default_error_weights})", default=default_error_weights, type=float)
 
-    parsers["CAR"]["eval"] = CAR_subparsers.add_parser("evaluate", description=eval_desc, help=eval_desc)
-    parsers["CAR"]["eval"].add_argument("--testset-infile", metavar='TESTSET_FILEPATH', help=f"default: {default_testset_path}", default=default_testset_path, type=str)
+    parsers["CBA"]["eval"] = CBA_subparsers.add_parser("evaluate", description=eval_desc, help=eval_desc)
+    parsers["CBA"]["eval"].add_argument("--testset-infile", metavar='TESTSET_FILEPATH', help=f"default: {default_testset_path}", default=default_testset_path, type=str)
+    parsers["CBA"]["eval"].add_argument("--pickle-path", metavar='PICKLE_PATH', help=f"default: {default_pickle_path}", default=default_pickle_path, type=str)
 
 def create_naive_bayesian_argparser(parsers, subparsers):
     parsers["naive_bayesian"] = subparsers.add_parser("naive_bayesian", description="WIP", help="WIP")
@@ -124,7 +128,7 @@ def main():
 
     create_process_dataset_argparser(parsers, subparsers)
     create_decision_tree_argparser(parsers, subparsers)
-    create_CAR_argparser(parsers, subparsers)
+    create_CBA_argparser(parsers, subparsers)
     create_naive_bayesian_argparser(parsers, subparsers)
 
     args = parser.parse_args()
@@ -132,20 +136,20 @@ def main():
     if args.command == "process_dataset":
         process_dataset(args)
     elif args.command == "decision_tree":
-        if args.subcommand_decision_tree == "build_tree":
+        if args.subcommand_decision_tree == "build":
             build_decision_tree(args)
-        elif args.subcommand_decision_tree == "evaluate_tree":
+        elif args.subcommand_decision_tree == "evaluate":
             evaluate_decision_tree(args)
         else:
             parsers["decision_tree"]["main_parser"].print_help()
 
-    elif args.command == "CAR":
-        if args.subcommand_CAR == "generate":
+    elif args.command == "CBA":
+        if args.subcommand_CBA == "generate":
             generate_CARs(args)
-        elif args.subcommand_CAR == "evaluate":
+        elif args.subcommand_CBA == "evaluate":
             evaluate_CARs(args)
         else:
-            parsers["CAR"]["main_parser"].print_help()
+            parsers["CBA"]["main_parser"].print_help()
 
     elif args.command == "naive_bayesian":
         # TODO

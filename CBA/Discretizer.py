@@ -1,4 +1,5 @@
-from common.Utils import Dataset, move_cursor_up_and_clear_line
+from common.Dataset import Dataset
+from common.Utils import move_cursor_up_and_clear_line
 
 def extract_thresholds(dataset, segment_map, split_count):
     thresholds = []
@@ -16,7 +17,7 @@ def extract_thresholds(dataset, segment_map, split_count):
         seg_start  = segment_map[bin_count][cur_seg_end]
 
         threshold = (values[seg_start] + values[seg_start + 1]) / 2
-        thresholds.append(threshold)
+        thresholds.append(round(threshold, 6))
 
         cur_seg_end = seg_start
         bin_count -= 1
