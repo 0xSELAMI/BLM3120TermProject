@@ -108,3 +108,13 @@ def best_thresholds_for_feature(trainset, feature_name, max_split_count, min_bin
             print(outstr + '\n')
 
     return best_thresholds
+
+def best_thresholds_for_features(dataset, max_split_count, min_bin_frac, delta_cost):
+    threshold_map = {}
+    print(f"Discretizing features, max_split_count: {max_split_count}, min_bin_frac: {min_bin_frac}, delta_cost: {delta_cost}\n")
+
+    for feature_name, feature_type in dataset.feature_types.items():
+        if feature_type.is_numeric:
+            threshold_map[feature_name] = best_thresholds_for_feature(dataset, feature_name, max_split_count, min_bin_frac, delta_cost)
+
+    return threshold_map

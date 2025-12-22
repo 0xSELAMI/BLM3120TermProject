@@ -2,17 +2,18 @@
 import math
 import common.Utils as CommonUtils
 
-from common.Dataset import Dataset
 import common.Helpers as CommonHelpers
+import common.Discretizer as Discretizer
+
+from common.Transaction import apply_thresholds
 
 import CBA.CBAHelpers as CBAHelpers
-from CBA.Transaction import apply_thresholds
 
 def generate_CARs(args):
     trainset  = CommonUtils.load_dataset(args.trainset_infile, args.entropy_weights)
 
     try:
-        threshold_map         = CBAHelpers.best_thresholds_for_features(trainset, args.max_split_count, args.min_bin_frac, args.delta_cost)
+        threshold_map         = Discretizer.best_thresholds_for_features(trainset, args.max_split_count, args.min_bin_frac, args.delta_cost)
         transactions          = apply_thresholds(trainset, threshold_map)
         
         max_k          = args.max_k
@@ -78,30 +79,34 @@ def predict_prob_transaction(rules, transaction, label_ratios):
         return 1.0 - best_rule["confidence"]
 
 def evaluate_CARs(args):
-    testset        = CommonUtils.load_dataset(args.testset_infile)
-    pickled_data   = CommonUtils.load_pickle(args.pickle_path)
+    try:
+        testset        = CommonUtils.load_dataset(args.testset_infile)
+        pickled_data   = CommonUtils.load_pickle(args.pickle_path)
 
-    rules                 = pickled_data["rules"]
-    threshold_map         = pickled_data["threshold_map"]
-    trainset_label_ratios = pickled_data["trainset_label_ratios"]
+        rules                 = pickled_data["rules"]
+        threshold_map         = pickled_data["threshold_map"]
+        trainset_label_ratios = pickled_data["trainset_label_ratios"]
 
-    transactions   = apply_thresholds(testset, threshold_map)
+        transactions   = apply_thresholds(testset, threshold_map)
 
-    predictions =   CommonHelpers.predict_dataset(
-                        transactions, None, 
-                        rules, predict_transaction
-                    )
-
-
-    accuracy, precision, recall = CommonHelpers.get_basic_metrics([t["label"] for t in transactions], predictions)
-
-    values_and_probs =  CommonHelpers.get_label_values_and_probs (
-                            rules, transactions,
-                            None, lambda transaction: transaction["label"],
-                            predict_prob_transaction, trainset_label_ratios
+        predictions =   CommonHelpers.predict_dataset(
+                            transactions, None, 
+                            rules, predict_transaction
                         )
 
-    roc_auc = CommonHelpers.calc_roc_auc(*values_and_probs)
-    print(f"ROC-AUC: {round(roc_auc, 4)}")
 
-    # TODO visualization, i think.
+        accuracy, precision, recall = CommonHelpers.get_basic_metrics([t["label"] for t in transactions], predictions)
+
+        values_and_probs =  CommonHelpers.get_label_values_and_probs (
+                                rules, transactions,
+                                None, lambda transaction: transaction["label"],
+                                predict_prob_transaction, trainset_label_ratios
+                            )
+
+        roc_auc = CommonHelpers.calc_roc_auc(*values_and_probs)
+        print(f"ROC-AUC: {round(roc_auc, 4)}")
+
+        # TODO visualization, i think.
+    except KeyboardInterrupt:
+        print("Received KeyboardInterrupt, exiting.")
+        exit(0)

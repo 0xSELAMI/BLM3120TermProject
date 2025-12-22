@@ -3,19 +3,8 @@ import pickle
 from collections import Counter
 
 import common.Utils as CommonUtils
-import CBA.Discretizer as Discretizer
-from CBA.Transaction import TransactionItemset
-
-def best_thresholds_for_features(dataset, max_split_count, min_bin_frac, delta_cost):
-    threshold_map = {}
-
-    print(f"Discretizing features, max_split_count: {max_split_count}, min_bin_frac: {min_bin_frac}, delta_cost: {delta_cost}\n")
-
-    for feature_name, feature_type in dataset.feature_types.items():
-        if feature_type.is_numeric:
-            threshold_map[feature_name] = Discretizer.best_thresholds_for_feature(dataset, feature_name, max_split_count, min_bin_frac, delta_cost)
-
-    return threshold_map
+import common.Discretizer as Discretizer
+from common.Transaction import TransactionItemset
 
 def get_F1(transactions, min_support):
     item_counts = Counter()
