@@ -6,7 +6,7 @@ import decision_tree.TreeBuilder as TreeBuilder
 
 from decision_tree.TreeNode import TreeNode
 
-def predict_instance(instance, node):
+def predict(instance, node):
     if node.is_leaf:
         return node.prediction
 
@@ -28,7 +28,7 @@ def predict_instance(instance, node):
         if val <= node.threshold:
             child_node = node.children.get("left")
 
-    return predict_instance(instance, child_node)
+    return predict(instance, child_node)
 
 def predict_prob_instance(root_node, instance):
     node = root_node
@@ -66,7 +66,11 @@ def build_decision_tree(args):
 
     trainset = CommonUtils.load_dataset(args.trainset_infile, args.entropy_weights)
 
+    if not trainset:
+        return None
+
     print("Building decision tree...", end = '\n\n')
+
     try:
         root = TreeBuilder.build_tree(trainset)
         CommonUtils.move_cursor_up_and_clear_line(2)
@@ -76,16 +80,25 @@ def build_decision_tree(args):
 
         DecisionTreeHelpers.export_tree_to_dot(root, args.dot_outfile)
         CommonUtils.save_pickle(root, args.pickle_path, "decision tree")
+
     except KeyboardInterrupt:
         print("Received KeyboardInterrupt, exiting.")
+        return None
 
 def evaluate_decision_tree(args):
     testset          = CommonUtils.load_dataset(args.testset_infile)
+
+    if not testset:
+        return None
+
     root             = CommonUtils.load_pickle(args.pickle_path)
+
+    if not root:
+        return None
 
     predictions      =  CommonHelpers.predict_dataset(
                             testset, lambda testset: testset.instances,
-                            root, predict_instance
+                            root, predict
                         )
 
     feature_names    = list(testset.feature_types.keys())

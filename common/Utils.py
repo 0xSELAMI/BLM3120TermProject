@@ -4,6 +4,7 @@ import json
 import pickle
 
 from common.Dataset import DatasetSchema, Dataset
+from sklearn.model_selection import train_test_split
 
 # dataset field types ( excluding the first field which is user id )
 field_types = [str, int, str, str, int, int, float, str, int, bool, bool]
@@ -15,13 +16,18 @@ def move_cursor_up_and_clear_line(times):
     for _ in range(times):
         print(cursorup+clear, end='')
 
-
 def process_dataset(args):
     dataset = load_dataset(args.dataset)
+
+    if not dataset:
+        return None
+
     testset, trainset = create_test_and_train_set(dataset, args.ratio)
 
     save_dataset(args.trainset_outfile, testset)
     save_dataset(args.testset_outfile, trainset)
+
+    print("[INFO] Test and Train datasets successfully created")
 
 def save_dataset(file_path, dataset):
     out_path = os.path.normpath(file_path)
@@ -50,6 +56,10 @@ def verify_dataset_format(dataset_contents):
 def load_dataset(dataset_filepath, entropy_weights = [1.0, 1.0]):
     global field_types
 
+    if not dataset_filepath:
+        print("[ERROR] load_dataset: dataset_filepath cannot be None")
+        return None
+
     norm_path = os.path.normpath(dataset_filepath)
     directory, filename = os.path.split(norm_path)
 
@@ -72,38 +82,40 @@ def load_dataset(dataset_filepath, entropy_weights = [1.0, 1.0]):
 
             if not verify_dataset_format(dataset_contents):
                 print("[ERROR] Malformed dataset")
-                exit(1)
+                return None
 
             DatasetSchema.configure_schema(dataset_contents, field_types, entropy_weights)
 
             dataset = Dataset(dataset_contents['instances'])
         elif file_ext == '':
             print(f"[ERROR] Dataset file extension should be '.json' or '.csv'")
-            exit(1)
+            return None
         else:
             print(f"[ERROR] Supplied dataset file has unsupported extension: {filename}")
-            exit(1)
+            return None
     except FileNotFoundError as e:
         print(f"[ERROR]{re.sub(r'\[Errno [0-9]+\]', '', str(e))}")
-        exit(1)
+        return None
 
     return dataset
 
 def create_test_and_train_set(dataset, ratio):
     x = []
 
-    for i in dataset.instances:
-        x.append([getattr(i, name) for name in dataset.field_names[:-1]])
+    field_names = list(dataset.feature_types.keys())
 
-    y = [getattr(i, dataset.field_names[-1]) for i in dataset.instances]
+    for i in dataset.instances:
+        x.append([getattr(i, name) for name in field_names[:-1]])
+
+    y = [getattr(i, field_names[-1]) for i in dataset.instances]
 
     # returns -> x train, x test, y train, y test
     # 1186 active, 414 churned in test instances (25.9%) churned
     # 4743 active, 1657 churned in training instances (25.6%) churned
     split = train_test_split(x, y, train_size = 1 - ratio, test_size = ratio, stratify=y)
 
-    trainset = { "instances": [], "field_names": dataset.field_names }
-    testset = { "instances": [], "field_names": dataset.field_names }
+    trainset = { "instances": [], "field_names": field_names }
+    testset = { "instances": [], "field_names": field_names }
 
     for i in range(len(split[0])):
         trainset["instances"].append( split[0][i] + [split[2][i]] )
@@ -133,6 +145,6 @@ def load_pickle(pickle_infile):
             data = pickle.load(f)
     except FileNotFoundError:
         print(f"File {pickle_infile} not found")
-        exit(1)
+        return None
 
     return data

@@ -3,8 +3,6 @@
 import sys
 import argparse
 
-from sklearn.model_selection import train_test_split
-
 from common.Instance import Instance
 from common.Features import FeatureType, FeatureFilter
 
@@ -18,9 +16,11 @@ from CBA.CBA import generate_CARs, evaluate_CARs
 
 from naive_bayesian.NaiveBayesian import build_naive_bayesian_classifier, evaluate_naive_bayesian_classifier
 
-def create_process_dataset_argparser(parsers, subparsers, default_trainset_path, default_testset_path):
-    default_testset_trainset_ratio = 0.2
+from defaults import *
 
+from GUI.gui import GUI
+
+def create_process_dataset_argparser(parsers, subparsers):
     main_desc = "Create testset and trainset from supplied dataset"
 
     parsers["process_dataset"] = subparsers.add_parser("process_dataset", description=main_desc, help=main_desc)
@@ -39,21 +39,8 @@ def create_decision_tree_argparser(parsers, subparsers, parent_parsers):
 
     decision_tree_subparsers = parsers["decision_tree"]["main_parser"].add_subparsers(title="commands", dest="subcommand_decision_tree")
 
-    default_max_depth             = 24
-    default_min_samples_split     = 4
-    default_min_info_gain         = 1e-4
-    default_min_samples_leaf      = 2
-    default_min_samples_leaf_kary = 0
-
-    default_use_gini              = False
-    default_entropy_weights       = [3.0, 1.0]
-
-    default_dot_outfile = "dotfiles/decisiontree.dot"
-
-    default_pickle_path = "decision_tree/decisiontree.pickle"
-
     pickle_parser = argparse.ArgumentParser(add_help=False)
-    pickle_parser.add_argument("--pickle-path", metavar='PICKLE_PATH', help=f"default: {default_pickle_path}", default=default_pickle_path, type=str)
+    pickle_parser.add_argument("--pickle-path", metavar='PICKLE_PATH', help=f"default: {default_decision_tree_pickle_path}", default=default_decision_tree_pickle_path, type=str)
 
     parsers["decision_tree"]["build"] = decision_tree_subparsers.add_parser("build", description=build_desc, help=build_desc, parents=[parent_parsers["builder"], pickle_parser])
     parsers["decision_tree"]["build"].add_argument("--use-gini", action='store_true', help=f"Use Gini impurity instead of entropy (default: {default_use_gini})", default=default_use_gini)
@@ -69,20 +56,12 @@ def create_decision_tree_argparser(parsers, subparsers, parent_parsers):
     parsers["decision_tree"]["evaluate"] = decision_tree_subparsers.add_parser("evaluate", description=eval_desc, help=eval_desc, parents=[parent_parsers["evaluator"], pickle_parser])
 
 def create_CBA_argparser(parsers, subparsers, parent_parsers):
-    default_max_k           = 4
-    default_min_support     = 1e-3
-    default_min_confidence  = 0.27
-    default_min_lift        = 1.20
-    default_error_weights   = [1.0, 1.5] # a false negative is %50 worse than a false positive
-
-    default_pickle_path = "CBA/rules.pickle"
-
     main_desc     = "Generate a CAR (Class Association Rule) classifier or evaluate a CAR classifier"
     generate_desc = "Generate a classifier and save into a pickle file"
     eval_desc     = "Evaluate the supplied classifier using the test set"
 
     pickle_parser = argparse.ArgumentParser(add_help=False)
-    pickle_parser.add_argument("--pickle-path", metavar='PICKLE_PATH', help=f"default: {default_pickle_path}", default=default_pickle_path, type=str)
+    pickle_parser.add_argument("--pickle-path", metavar='PICKLE_PATH', help=f"default: {default_CBA_pickle_path}", default=default_CBA_pickle_path, type=str)
 
     parsers["CBA"]                = {}
     parsers["CBA"]["main_parser"] = subparsers.add_parser("CBA", description=main_desc, help=main_desc)
@@ -103,10 +82,8 @@ def create_naive_bayesian_argparser(parsers, subparsers, parent_parsers):
     build_desc = "Build a naive bayesian classifier probability table using the trainset and save into a pickle file"
     eval_desc  = "Evaluate a naive bayesian classifier probability table using the supplied testset"
 
-    default_pickle_path = "naive_bayesian/probability_table.pickle"
-
     pickle_parser = argparse.ArgumentParser(add_help=False)
-    pickle_parser.add_argument("--pickle-path", metavar='PICKLE_PATH', help=f"default: {default_pickle_path}", default=default_pickle_path, type=str)
+    pickle_parser.add_argument("--pickle-path", metavar='PICKLE_PATH', help=f"default: {default_naive_bayesian_pickle_path}", default=default_naive_bayesian_pickle_path, type=str)
 
     parsers["naive_bayesian"]                = {}
     parsers["naive_bayesian"]["main_parser"] = subparsers.add_parser("naive_bayesian", description=main_desc, help=main_desc)
@@ -129,14 +106,6 @@ def main():
 
     subparsers = parser.add_subparsers(title="commands", dest="command")
 
-    default_trainset_path = "dataset/trainset.json"
-    default_testset_path = "dataset/testset.json"
-
-    default_entropy_weights = [3.0, 1.0]
-    default_max_split_count = 3
-    default_min_bin_frac    = 0.1
-    default_delta_cost      = 1e-3
-
     parent_parsers = {}
     parent_parsers["builder"] = argparse.ArgumentParser(add_help=False)
     parent_parsers["builder"].add_argument("--trainset-infile", metavar='TRAINSET_FILEPATH', help=f"default: {default_trainset_path}", default=default_trainset_path, type=str)
@@ -152,15 +121,36 @@ def main():
 
     parsers = {}
 
-    create_process_dataset_argparser(parsers, subparsers, default_trainset_path, default_testset_path)
+    gui_parser = subparsers.add_parser("GUI", description=f"Starts the gradio GUI", help="Starts the gradio GUI")
+    create_process_dataset_argparser(parsers, subparsers)
     create_decision_tree_argparser(parsers, subparsers, parent_parsers)
     create_CBA_argparser(parsers, subparsers, parent_parsers)
     create_naive_bayesian_argparser(parsers, subparsers, parent_parsers)
 
     args = parser.parse_args()
 
-    if args.command == "process_dataset":
+    if args.command == "GUI":
+        handlers = {}
+        handlers["process_dataset"] = process_dataset
+
+        handlers["decision_tree"] = {}
+        handlers["decision_tree"]["build"] = build_decision_tree
+        handlers["decision_tree"]["evaluate"] = evaluate_decision_tree
+
+        handlers["CBA"] = {}
+        handlers["CBA"]["generate"] = generate_CARs
+        handlers["CBA"]["evaluate"] = evaluate_CARs
+
+        handlers["naive_bayesian"] = {}
+        handlers["naive_bayesian"]["build"] = build_naive_bayesian_classifier
+        handlers["naive_bayesian"]["evaluate"] = evaluate_naive_bayesian_classifier
+
+        project_gui = GUI(handlers)
+        project_gui.launch()
+
+    elif args.command == "process_dataset":
         process_dataset(args)
+
     elif args.command == "decision_tree":
         if args.subcommand_decision_tree == "build":
             build_decision_tree(args)

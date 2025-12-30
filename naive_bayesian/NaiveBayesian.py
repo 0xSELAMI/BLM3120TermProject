@@ -1,14 +1,14 @@
+import math
+
 import common.Utils as CommonUtils
 import common.Helpers as CommonHelpers
 import common.Discretizer as Discretizer
 from common.Transaction import apply_thresholds
 
-import math
+def get_prediction_scores(transaction, probability_table, label_counts, initial_scores):
+    scores = initial_scores
 
-def predict(transaction, probability_table, label_counts):
-    scores = {label: math.log(0.5) for label in [True, False]}
-
-    for label in [True, False]:
+    for label in scores.keys():
         for item in transaction["itemset"]:
             fname = item.feature_name
             fval  = item.rule_format
@@ -23,7 +23,24 @@ def predict(transaction, probability_table, label_counts):
 
             scores[label] += math.log(prob)
 
+    return scores
+
+def predict(transaction, probability_table, label_counts):
+    scores = get_prediction_scores(transaction, probability_table, label_counts, {True: 0, False: 0})
     return max(scores, key=scores.get)
+
+def prediction_probability_true(probability_table, transaction, label_counts):
+    scores = get_prediction_scores(transaction, probability_table, label_counts, {True: 0, False: 0})
+
+    max_score = max(scores.values())
+
+    # probability of True = exp(log_true) / (exp(log_true) + exp(log_false))
+    # subtract max_score to prevent overflow,
+    # because exponents get large quick
+    exp_true = math.exp(scores[True] - max_score)
+    exp_false = math.exp(scores[False] - max_score)
+
+    return exp_true / (exp_true + exp_false)
 
 def build_naive_bayesian_classifier(args):
     try:
@@ -75,7 +92,15 @@ def evaluate_naive_bayesian_classifier(args):
 
         accuracy, precision, recall = CommonHelpers.get_basic_metrics([t["label"] for t in transactions], predictions)
 
-        # TODO ROC AUC
+        values_and_probs =  CommonHelpers.get_label_values_and_probs (
+                                probability_table, transactions,
+                                None, lambda transaction: transaction["label"],
+                                prediction_probability_true, label_counts
+                            )
+
+        roc_auc = CommonHelpers.calc_roc_auc(*values_and_probs)
+        print(f"ROC-AUC: {round(roc_auc, 4)}")
+
     except KeyboardInterrupt:
         print("Received KeyboardInterrupt, exiting.")
         exit(0)

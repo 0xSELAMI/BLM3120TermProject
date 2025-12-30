@@ -12,6 +12,9 @@ import CBA.CBAHelpers as CBAHelpers
 def generate_CARs(args):
     trainset  = CommonUtils.load_dataset(args.trainset_infile, args.entropy_weights)
 
+    if not trainset:
+        return None
+
     try:
         threshold_map         = Discretizer.best_thresholds_for_features(trainset, args.max_split_count, args.min_bin_frac, args.delta_cost)
         transactions          = apply_thresholds(trainset, threshold_map)
@@ -50,9 +53,9 @@ def generate_CARs(args):
 
     except KeyboardInterrupt:
         print("Received KeyboardInterrupt, exiting.")
-        exit(0)
+        return None
 
-def predict_transaction(transaction, rules):
+def predict(transaction, rules):
     for rule in rules:
         # if rule has default: True, then return its label
         if rule.get("default", False):
@@ -81,7 +84,14 @@ def predict_prob_transaction(rules, transaction, label_ratios):
 def evaluate_CARs(args):
     try:
         testset        = CommonUtils.load_dataset(args.testset_infile)
+
+        if not testset:
+            return None
+
         pickled_data   = CommonUtils.load_pickle(args.pickle_path)
+
+        if not pickled_data:
+            return None
 
         rules                 = pickled_data["rules"]
         threshold_map         = pickled_data["threshold_map"]
@@ -91,7 +101,7 @@ def evaluate_CARs(args):
 
         predictions =   CommonHelpers.predict_dataset(
                             transactions, None, 
-                            rules, predict_transaction
+                            rules, predict
                         )
 
 
