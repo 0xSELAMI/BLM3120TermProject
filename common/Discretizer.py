@@ -1,5 +1,6 @@
 from common.Dataset import Dataset
 from common.Utils import move_cursor_up_and_clear_line
+from common.Logger import logger
 
 def extract_thresholds(dataset, segment_map, split_count):
     thresholds = []
@@ -97,24 +98,29 @@ def best_thresholds_for_feature(trainset, feature_name, max_split_count, min_bin
                 best_cost       = discretization_cost
                 best_thresholds = thresholds
 
-        outstr += f"best_thresholds: {best_thresholds}\nbest_cost: {round(best_cost, 6)}"
+        outstr += f"best_thresholds: {best_thresholds}\nbest_cost: {round(best_cost, 6)}\n"
 
         if split_count < max_split_count:
-            print(outstr)
-            move_cursor_up_and_clear_line(3)
+            logger.log(outstr)
+            yield
+            logger.backtrack(1)
         else:
             outstr = f"Discretized feature: {feature_name}, split_count: {len(best_thresholds)}\n"
-            outstr += f"best_thresholds: {best_thresholds}\nbest_cost: {round(best_cost, 6)}"
-            print(outstr + '\n')
+            outstr += f"best_thresholds: {best_thresholds}\nbest_cost: {round(best_cost, 6)}\n"
+
+            logger.log(outstr)
+            yield
 
     return best_thresholds
 
 def best_thresholds_for_features(dataset, max_split_count, min_bin_frac, delta_cost):
     threshold_map = {}
-    print(f"Discretizing features, max_split_count: {max_split_count}, min_bin_frac: {min_bin_frac}, delta_cost: {delta_cost}\n")
+
+    logger.log(f"Discretizing features, max_split_count: {max_split_count}, min_bin_frac: {min_bin_frac}, delta_cost: {delta_cost}\n")
+    yield
 
     for feature_name, feature_type in dataset.feature_types.items():
         if feature_type.is_numeric:
-            threshold_map[feature_name] = best_thresholds_for_feature(dataset, feature_name, max_split_count, min_bin_frac, delta_cost)
+            threshold_map[feature_name] = yield from best_thresholds_for_feature(dataset, feature_name, max_split_count, min_bin_frac, delta_cost)
 
     return threshold_map

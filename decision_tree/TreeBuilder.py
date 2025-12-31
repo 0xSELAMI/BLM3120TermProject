@@ -1,6 +1,8 @@
 from common.Utils import move_cursor_up_and_clear_line
 from common.Dataset import Dataset
 
+from common.Logger import logger
+
 from decision_tree.TreeNode import TreeNode
 
 import decision_tree.DecisionTreeHelpers as helpers
@@ -16,9 +18,9 @@ def build_tree(dataset, depth = 0):
     infostr += f"curdepth: {depth}\n"
     infostr += dataset.value_domains_repr() + '\n'
 
-    print(infostr)
-
-    move_cursor_up_and_clear_line(len(infostr.split('\n')))
+    logger.log(infostr)
+    yield
+    logger.backtrack(1)
 
     if dataset.is_empty:
         return TreeNode(is_leaf=True, prediction=False, n_samples=0, n_pred=0)
@@ -36,7 +38,8 @@ def build_tree(dataset, depth = 0):
         pred, count = dataset.majority_label
         return TreeNode(is_leaf=True, prediction=pred, n_samples=dataset.size, n_pred=count)
 
-    return subtree_for_split(dataset, depth, best_split)
+    subtree = yield from subtree_for_split(dataset, depth, best_split)
+    return subtree
 
 def subtree_for_split(dataset, depth, best_split):
     split_kind, feature_type, threshold = best_split
@@ -51,8 +54,8 @@ def subtree_for_split(dataset, depth, best_split):
             pred, count = dataset.majority_label
             return TreeNode(is_leaf=True, prediction=pred, n_samples=dataset.size, n_pred=count)
 
-        left_child = build_tree(left_split, depth + 1)
-        right_child = build_tree(right_split, depth + 1)
+        left_child = yield from build_tree(left_split, depth + 1)
+        right_child = yield from build_tree(right_split, depth + 1)
 
         return TreeNode(
             is_leaf=False,
@@ -75,7 +78,7 @@ def subtree_for_split(dataset, depth, best_split):
             subset = Dataset.subset_with_feature_filter(dataset, [feature_type == val])
             if subset.is_empty:
                 continue
-            children[val] = build_tree(subset, depth + 1)
+            children[val] = yield from build_tree(subset, depth + 1)
 
         if not children:
             pred, count = dataset.majority_label
@@ -97,13 +100,13 @@ def collapse_pure_subtrees(node):
 
     if node.is_categorical:
         for val, child in list(node.children.items()):
-            preds = collapse_pure_subtrees(child)
+            preds = yield from collapse_pure_subtrees(child)
             child_labels.update(preds)
     else:
         for key in ("left", "right"):
             child = node.children.get(key)
             if child is not None:
-                preds = collapse_pure_subtrees(child)
+                preds = yield from collapse_pure_subtrees(child)
                 child_labels.update(preds)
 
     if len(child_labels) != 1:
@@ -120,4 +123,7 @@ def collapse_pure_subtrees(node):
 
     # all samples in scope have the same label
     node.n_pred = node.n_samples
+
+    yield
+
     return {pred}

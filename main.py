@@ -129,6 +129,11 @@ def main():
 
     args = parser.parse_args()
 
+    # generator drainer
+    def run_task(fnc):
+        for _ in fnc(args):
+            pass
+
     if args.command == "GUI":
         handlers = {}
         handlers["process_dataset"] = process_dataset
@@ -149,29 +154,31 @@ def main():
         project_gui.launch()
 
     elif args.command == "process_dataset":
-        process_dataset(args)
+        #process_dataset(args)
+        run_task(process_dataset)
 
     elif args.command == "decision_tree":
         if args.subcommand_decision_tree == "build":
-            build_decision_tree(args)
+            run_task(build_decision_tree)
         elif args.subcommand_decision_tree == "evaluate":
-            evaluate_decision_tree(args)
+            # drain the generator output, so things get printed
+            run_task(evaluate_decision_tree)
         else:
             parsers["decision_tree"]["main_parser"].print_help()
 
     elif args.command == "CBA":
         if args.subcommand_CBA == "generate":
-            generate_CARs(args)
+            run_task(generate_CARs)
         elif args.subcommand_CBA == "evaluate":
-            evaluate_CARs(args)
+            run_task(evaluate_CARs)
         else:
             parsers["CBA"]["main_parser"].print_help()
 
     elif args.command == "naive_bayesian":
         if args.subcommand_NB == "build":
-            build_naive_bayesian_classifier(args)
+            run_task(build_naive_bayesian_classifier)
         elif args.subcommand_NB == "evaluate":
-            evaluate_naive_bayesian_classifier(args)
+            run_task(evaluate_naive_bayesian_classifier)
         else:
             parsers["naive_bayesian"]["main_parser"].print_help()
     else:

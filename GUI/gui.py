@@ -1,4 +1,5 @@
 import gradio as gr
+import inspect
 import traceback
 from defaults import *
 
@@ -7,13 +8,15 @@ from contextlib import redirect_stdout, redirect_stderr
 
 from GUI.layout_definition import layout_definition
 
+from common.Logger import logger
+
 class ForwardArgs:
     def __init__(self, user, args):
         self.invalid = False
 
         for name in args:
             if args[name] is None or args[name] == '':
-                print(f"[ERROR] {user}(): {name} invalid")
+                logger.log(f"[ERROR] {user}(): {name} invalid")
                 self.invalid = True
                 break
 
@@ -37,8 +40,10 @@ class GUI:
                 self.log_out = gr.Textbox(
                     label="Output",
                     lines=10,
+                    max_lines=20,
                     placeholder="Logs will appear here...",
                     interactive=False,
+                    autoscroll=True,
                     scale=9
                 )
 
@@ -53,28 +58,39 @@ class GUI:
         return project_gui
 
     def generic_forward(self, handler_path, param_names, *values):
-        f = io.StringIO()
-        with redirect_stdout(f), redirect_stderr(f):
+        logger.clear()
 
-            # build args dictionary
-            args_dict = dict(zip(param_names, values))
+        # build args dictionary
+        args_dict = dict(zip(param_names, values))
 
-            # type conversion for comma-separated weights
-            for k, v in args_dict.items():
-                if isinstance(v, str) and "weights" in k:
-                    args_dict[k] = [float(w) for w in v.split(',') if w.strip()]
+        # type conversion for comma-separated weights
+        for k, v in args_dict.items():
+            if isinstance(v, str) and "weights" in k:
+                args_dict[k] = [float(w) for w in v.split(',') if w.strip()]
 
-            args = ForwardArgs(handler_path, args_dict)
+        args = ForwardArgs(handler_path, args_dict)
 
-            if not args.invalid:
+        if not args.invalid:
+            try:
                 handler = self.handlers
 
                 for key in handler_path.split('.'):
                     handler = handler[key]
 
-                handler(args)
+                result = handler(args)
 
-            return f.getvalue()
+                if inspect.isgenerator(result):
+                    for _ in result:
+                        yield logger.read_all()
+
+                #yield logger.read_all()
+
+            except Exception:
+                logger.log("\n" + "="*20 + "\n[ERROR]\n" + "="*20)
+                logger.log(traceback.format_exc())
+                yield logger.read_all()
+        else:
+            yield logger.read_all()
 
     def render_layout(self, layout):
         with gr.Tab(layout["title"]):
@@ -92,8 +108,8 @@ class GUI:
                 btn = gr.Button(f"{layout['title']}", variant="primary")
 
                 btn.click(
-                    fn=lambda *args: self.generic_forward(layout["handler"], all_keys, *args),
-                    inputs=all_inputs,
+                    fn=self.generic_forward,
+                    inputs=[gr.State(layout["handler"]), gr.State(all_keys)] + all_inputs,
                     outputs=[self.log_out]
                 )
 

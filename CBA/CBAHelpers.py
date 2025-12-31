@@ -2,8 +2,10 @@ import os
 import pickle
 from collections import Counter
 
+from common.Logger import logger
 import common.Utils as CommonUtils
 import common.Discretizer as Discretizer
+
 from common.Transaction import TransactionItemset
 
 def get_F1(transactions, min_support):
@@ -26,7 +28,8 @@ def generate_candidates(F_prev, k):
     for i in range(setcount):
         itemset_i = itemsets[i]
 
-        print(infostr + f"{i}/{setcount}")
+        logger.log(infostr + f"{i}/{setcount}")
+        yield
 
         for j in range(i + 1, setcount):
             candidate = itemset_i | itemsets[j]
@@ -34,7 +37,8 @@ def generate_candidates(F_prev, k):
             if len(candidate) == k:
                 candidates.add(candidate)
 
-        CommonUtils.move_cursor_up_and_clear_line(1)
+        logger.backtrack(1)
+        #CommonUtils.move_cursor_up_and_clear_line(1)
 
     return TransactionItemset(candidates)
 
@@ -47,12 +51,14 @@ def prune_candidates(candidates, F_prev):
     candidate_count = len(candidates)
 
     for i, candidate in enumerate(candidates):
-        print(infostr + f"{i}/{candidate_count}")
+        logger.log(infostr + f"{i}/{candidate_count}")
+        yield
 
         if all( (candidate - {item}) in set(F_prev.keys()) for item in candidate ):
             pruned.add(candidate)
 
-        CommonUtils.move_cursor_up_and_clear_line(1)
+        logger.backtrack(1)
+        #CommonUtils.move_cursor_up_and_clear_line(1)
 
     return TransactionItemset(pruned)
 
@@ -68,7 +74,8 @@ def calc_candidate_counts(candidates, transactions, min_support):
     for i, t in enumerate(transactions):
         t_itemset = t["itemset"]
 
-        print(infostr + f"{i}/{transaction_count}")
+        logger.log(infostr + f"{i}/{transaction_count}")
+        yield
 
         for candidate in candidates:
             if len(t_itemset) < len(candidate):
@@ -77,12 +84,15 @@ def calc_candidate_counts(candidates, transactions, min_support):
             if candidate.issubset(t_itemset):
                 counts[candidate] += 1
 
-        CommonUtils.move_cursor_up_and_clear_line(1)
+        logger.backtrack(1)
+        #CommonUtils.move_cursor_up_and_clear_line(1)
 
     return {candidate: count for candidate, count in counts.items() if (count / len(transactions) >= min_support)}
 
 def apriori(transactions, min_support, max_k):
-    print("Collecting frequent itemsets with size 1")
+    logger.log("Collecting frequent itemsets with size 1")
+    yield
+
     F = [get_F1(transactions, min_support)]
 
     k = 2
@@ -90,24 +100,27 @@ def apriori(transactions, min_support, max_k):
     infostr = f"Collecting frequent itemsets with size"
 
     while F[k - 2] and k <= max_k:
-        CommonUtils.move_cursor_up_and_clear_line(1)
+        logger.update_last(infostr + f" {k} : generating candidates")
+        yield
 
-        print(infostr + f" {k} : generating candidates")
-        candidates_k = generate_candidates(F[k - 2], k)
-        CommonUtils.move_cursor_up_and_clear_line(1)
+        candidates_k = yield from generate_candidates(F[k - 2], k)
 
-        print(infostr + f" {k} : pruning candidates")
-        candidates_k = prune_candidates(candidates_k, F[k - 2])
-        CommonUtils.move_cursor_up_and_clear_line(1)
+        logger.update_last(infostr + f" {k} : pruning candidates")
+        yield
 
-        print(infostr + f" {k} : counting candidate occurances in transactions")
-        Fk = calc_candidate_counts(candidates_k, transactions, min_support)
+        candidates_k = yield from prune_candidates(candidates_k, F[k - 2])
+
+        logger.update_last(infostr + f" {k} : counting candidate occurances in transactions")
+        yield
+        Fk = yield from calc_candidate_counts(candidates_k, transactions, min_support)
 
         if not Fk:
             break
         
         k += 1
         F.append(Fk)
+
+    yield
 
     return F
 
@@ -120,10 +133,12 @@ def generate_rules(all_frequent_itemsets, transactions, min_support, min_confide
     }
 
     infostr = "Generating CARs..."
+    logger.log(infostr)
 
     for i, Fk in enumerate(all_frequent_itemsets):
         sorted_Fk = sorted(Fk.items(), key=lambda x: str(x[0]))
-        print(infostr + f" processing {i+1}-item frequent itemsets with {len(Fk)} itemsets")
+        logger.update_last(infostr + f" processing {i+1}-item frequent itemsets with {len(Fk)} itemsets")
+        yield
 
         # for every itemset in the current frequent itemset
         for frequent_itemset, count_X in sorted_Fk:
@@ -177,7 +192,7 @@ def generate_rules(all_frequent_itemsets, transactions, min_support, min_confide
 
                 rules.append(current_rule)
 
-        CommonUtils.move_cursor_up_and_clear_line(1)
+        #CommonUtils.move_cursor_up_and_clear_line(1)
 
     return rules, label_supports
 

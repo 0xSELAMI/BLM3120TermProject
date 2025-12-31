@@ -14,6 +14,7 @@ PREPROCESS_DATASET = {
         {
             "layout": "group",
             "fields": [
+                {"id": "dataset", "label": "Dataset", "type": "path", "value": default_dataset_path},
                 {"id": "testset_outfile", "label": "Testset Output Path", "type": "path", "value": default_testset_path},
                 {"id": "trainset_outfile", "label": "Trainset Output Path", "type": "path", "value": default_trainset_path},
                 {
@@ -118,9 +119,10 @@ CBA = {
                                     "layout": "group",
                                     "fields": [
                                         {"id": "max_k", "label": "Max K", "type":"number", "value":default_max_k, "info":"Max K value for apriori"},
-                                        {"id": "min_supoprt", "label": "Minimum Support", "type":"number", "value":default_min_support, "info":"Minimum support for the CARs"},
+                                        {"id": "min_support", "label": "Minimum Support", "type":"number", "value":default_min_support, "info":"Minimum support for the CARs"},
                                         {"id": "min_confidence", "label": "Minimum Confidence", "type":"number", "value":default_min_confidence, "info":"Minimum confidence for the CARs"},
                                         {"id": "min_lift", "label": "Minimum Lift", "type":"number", "value":default_min_lift, "info":"Minimum lift for the CARs"},
+                                        {"id": "error_weights", "label": "Error Weights", "value": ','.join((str(default_error_weights)[1:-1]).split(", ")), "info":"The weights to use for penalizing rules that incorrectly cover instances while building CAR classifier"},
                                     ]
                                 }
                             ]

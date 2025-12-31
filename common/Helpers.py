@@ -1,3 +1,5 @@
+from common.Logger import logger
+
 def calc_candidate_thresholds(dataset, feature_type):
     if not feature_type.is_numeric:
         raise ValueError(f"non-numeric feature type supplied to candidate threshold calculation: {feature_type}")
@@ -67,16 +69,17 @@ def get_basic_metrics(labels, predictions):
         recall    = (confusion_matrix["TP"] / preds_tp_fn)
         f1_score  = 2 * ( (precision * recall) / (precision + recall) )
 
-    print(f"Accuracy: %{round(accuracy*100, 4)} ({preds_tp_tn}/{len(labels)})")
+    logger.log(f"Accuracy: %{round(accuracy*100, 4)} ({preds_tp_tn}/{len(labels)})")
 
-    print(f"True Positives: {confusion_matrix['TP']}/{len(labels)}")
-    print(f"True Negatives: {confusion_matrix['TN']}/{len(labels)}")
-    print(f"False Positives: {confusion_matrix['FP']}/{len(labels)}")
-    print(f"False Negatives: {confusion_matrix['FN']}/{len(labels)}")
+    logger.log(f"True Positives: {confusion_matrix['TP']}/{len(labels)}")
+    logger.log(f"True Negatives: {confusion_matrix['TN']}/{len(labels)}")
+    logger.log(f"False Positives: {confusion_matrix['FP']}/{len(labels)}")
+    logger.log(f"False Negatives: {confusion_matrix['FN']}/{len(labels)}")
 
-    print(f"Precision: %{round(precision * 100, 4)} ({confusion_matrix['TP']}/{preds_all_positive})")
-    print(f"Recall: %{round(recall * 100, 4)} ({confusion_matrix['TP']}/{preds_tp_fn})")
-    print(f"F1-Score: {round(f1_score, 4)}")
+    logger.log(f"Precision: %{round(precision * 100, 4)} ({confusion_matrix['TP']}/{preds_all_positive})")
+    logger.log(f"Recall: %{round(recall * 100, 4)} ({confusion_matrix['TP']}/{preds_tp_fn})")
+    logger.log(f"F1-Score: {round(f1_score, 4)}")
+    yield
 
     # maybe return confusion matrix too, if need be
     return (accuracy, precision, recall)
@@ -124,3 +127,17 @@ def calc_roc_auc(y_label_values, y_probs):
     auc = (rank_sum - ctx_label_true * (ctx_label_true + 1) / 2) / (ctx_label_true * ctx_label_false)
     return auc
 
+def get_metrics(predictions, labels, learning_output, dataset, dataset_property_accessor, data_label_accessor, probability_function, *fargs):
+    accuracy, precision, recall = yield from get_basic_metrics(labels, predictions)
+
+    values_and_probs =  get_label_values_and_probs(
+                            learning_output, dataset,
+                            dataset_property_accessor, data_label_accessor,
+                            probability_function, *fargs
+                        )
+
+    roc_auc = calc_roc_auc(*values_and_probs)
+    logger.log(f"ROC-AUC: {round(roc_auc, 4)}\n")
+    yield
+
+    return accuracy, precision, recall, roc_auc

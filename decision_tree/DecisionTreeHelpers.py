@@ -3,6 +3,7 @@ import pickle
 
 from common.Dataset import Dataset
 from common.Helpers import calc_candidate_thresholds
+from common.Logger import logger
 
 MIN_SAMPLES_LEAF = None
 MIN_SAMPLES_LEAF_KARY = None
@@ -161,4 +162,5 @@ def export_tree_to_dot(root, dot_outfile):
     with open(out_path, "w") as f:
         f.write("\n".join(lines))
 
-    print(f"Exported tree as DOT to {out_path}")
+    logger.log(f"Exported tree as DOT to {out_path}")
+    yield

@@ -36,3 +36,4 @@ default_delta_cost      = 1e-3
 
 # all
 default_entropy_weights = [3.0, 1.0]
+default_dataset_path = "dataset/spotify_churn_dataset.csv"

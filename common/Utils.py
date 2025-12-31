@@ -1,10 +1,13 @@
 import os
+import re
 import csv
 import json
 import pickle
 
 from common.Dataset import DatasetSchema, Dataset
 from sklearn.model_selection import train_test_split
+
+from common.Logger import logger
 
 # dataset field types ( excluding the first field which is user id )
 field_types = [str, int, str, str, int, int, float, str, int, bool, bool]
@@ -27,7 +30,8 @@ def process_dataset(args):
     save_dataset(args.trainset_outfile, testset)
     save_dataset(args.testset_outfile, trainset)
 
-    print("[INFO] Test and Train datasets successfully created")
+    logger.log("[INFO] Test and Train datasets successfully created")
+    yield
 
 def save_dataset(file_path, dataset):
     out_path = os.path.normpath(file_path)
@@ -57,7 +61,7 @@ def load_dataset(dataset_filepath, entropy_weights = [1.0, 1.0]):
     global field_types
 
     if not dataset_filepath:
-        print("[ERROR] load_dataset: dataset_filepath cannot be None")
+        logger.log("[ERROR] load_dataset: dataset_filepath cannot be None")
         return None
 
     norm_path = os.path.normpath(dataset_filepath)
@@ -81,20 +85,20 @@ def load_dataset(dataset_filepath, entropy_weights = [1.0, 1.0]):
             dataset_contents = json.load(open(dataset_filepath))
 
             if not verify_dataset_format(dataset_contents):
-                print("[ERROR] Malformed dataset")
+                logger.log("[ERROR] Malformed dataset")
                 return None
 
             DatasetSchema.configure_schema(dataset_contents, field_types, entropy_weights)
 
             dataset = Dataset(dataset_contents['instances'])
         elif file_ext == '':
-            print(f"[ERROR] Dataset file extension should be '.json' or '.csv'")
+            logger.log(f"[ERROR] Dataset file extension should be '.json' or '.csv'")
             return None
         else:
-            print(f"[ERROR] Supplied dataset file has unsupported extension: {filename}")
+            logger.log(f"[ERROR] Supplied dataset file has unsupported extension: {filename}")
             return None
     except FileNotFoundError as e:
-        print(f"[ERROR]{re.sub(r'\[Errno [0-9]+\]', '', str(e))}")
+        logger.log(f"[ERROR]{re.sub(r'\[Errno [0-9]+\]', '', str(e))}")
         return None
 
     return dataset
@@ -135,7 +139,8 @@ def save_pickle(data, pickle_outfile, datatype):
     with open(out_path, "wb+") as f:
         pickle.dump(data, f)
 
-    print(f"Pickled {datatype} into file: {out_path}")
+    logger.log(f"Pickled {datatype} into file: {out_path}")
+    yield
 
 def load_pickle(pickle_infile):
     data = None
@@ -143,8 +148,8 @@ def load_pickle(pickle_infile):
     try:
         with open(pickle_infile, "rb") as f:
             data = pickle.load(f)
-    except FileNotFoundError:
-        print(f"File {pickle_infile} not found")
+    except FileNotFoundError as e:
+        logger.log(f"[ERROR]{re.sub(r'\[Errno [0-9]+\]', '', str(e))}")
         return None
 
     return data

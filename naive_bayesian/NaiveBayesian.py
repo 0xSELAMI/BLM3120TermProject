@@ -5,6 +5,8 @@ import common.Helpers as CommonHelpers
 import common.Discretizer as Discretizer
 from common.Transaction import apply_thresholds
 
+from common.Logger import logger
+
 def get_prediction_scores(transaction, probability_table, label_counts, initial_scores):
     scores = initial_scores
 
@@ -45,7 +47,11 @@ def prediction_probability_true(probability_table, transaction, label_counts):
 def build_naive_bayesian_classifier(args):
     try:
         trainset = CommonUtils.load_dataset(args.trainset_infile, args.entropy_weights)
-        threshold_map = Discretizer.best_thresholds_for_features(trainset, args.max_split_count, args.min_bin_frac, args.delta_cost)
+
+        if not trainset:
+            return
+
+        threshold_map = yield from Discretizer.best_thresholds_for_features(trainset, args.max_split_count, args.min_bin_frac, args.delta_cost)
         transactions = apply_thresholds(trainset, threshold_map)
 
         probability_table = {}
@@ -67,7 +73,9 @@ def build_naive_bayesian_classifier(args):
                 probability_table[fname][fval][label] += 1
 
         out = {"probability_table" : probability_table, "threshold_map": threshold_map, "label_counts": label_counts}
-        CommonUtils.save_pickle(out, args.pickle_path, "naive bayesian classifier probability table and threshold map")
+        yield from CommonUtils.save_pickle(out, args.pickle_path, "naive bayesian classifier probability table and threshold map")
+
+        yield
 
     except KeyboardInterrupt:
         print("Received KeyboardInterrupt, exiting.")
@@ -76,7 +84,14 @@ def build_naive_bayesian_classifier(args):
 def evaluate_naive_bayesian_classifier(args):
     try:
         testset           = CommonUtils.load_dataset(args.testset_infile)
+
+        if not testset:
+            return
+
         pickled_data      = CommonUtils.load_pickle(args.pickle_path)
+
+        if not pickled_data:
+            return
 
         probability_table = pickled_data["probability_table"]
         threshold_map     = pickled_data["threshold_map"]
@@ -90,16 +105,9 @@ def evaluate_naive_bayesian_classifier(args):
                             label_counts
                         )
 
-        accuracy, precision, recall = CommonHelpers.get_basic_metrics([t["label"] for t in transactions], predictions)
-
-        values_and_probs =  CommonHelpers.get_label_values_and_probs (
-                                probability_table, transactions,
-                                None, lambda transaction: transaction["label"],
-                                prediction_probability_true, label_counts
-                            )
-
-        roc_auc = CommonHelpers.calc_roc_auc(*values_and_probs)
-        print(f"ROC-AUC: {round(roc_auc, 4)}")
+        accuracy, precision, recall, roc_auc = yield from CommonHelpers.get_metrics(
+                predictions, [t["label"] for t in transactions], probability_table, transactions,
+                None, lambda transaction: transaction["label"], prediction_probability_true, label_counts)
 
     except KeyboardInterrupt:
         print("Received KeyboardInterrupt, exiting.")

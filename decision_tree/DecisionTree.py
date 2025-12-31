@@ -1,5 +1,6 @@
 import common.Utils as CommonUtils
 import common.Helpers as CommonHelpers
+from common.Logger import logger
 
 import decision_tree.DecisionTreeHelpers as DecisionTreeHelpers
 import decision_tree.TreeBuilder as TreeBuilder
@@ -69,16 +70,18 @@ def build_decision_tree(args):
     if not trainset:
         return None
 
-    print("Building decision tree...", end = '\n\n')
+    logger.log("Building decision tree...", end = '\n\n')
+    yield
 
     try:
-        root = TreeBuilder.build_tree(trainset)
-        CommonUtils.move_cursor_up_and_clear_line(2)
-        print("Building decision tree... Completed Successfully")
-        print("Collapsing pure subtrees into leaves...")
-        TreeBuilder.collapse_pure_subtrees(root)
+        root = yield from TreeBuilder.build_tree(trainset)
+        logger.update_last("Building decision tree... Completed Successfully")
+        logger.log("Collapsing pure subtrees into leaves...")
+        yield
 
-        DecisionTreeHelpers.export_tree_to_dot(root, args.dot_outfile)
+        yield from TreeBuilder.collapse_pure_subtrees(root)
+
+        yield from DecisionTreeHelpers.export_tree_to_dot(root, args.dot_outfile)
         CommonUtils.save_pickle(root, args.pickle_path, "decision tree")
 
     except KeyboardInterrupt:
@@ -86,34 +89,28 @@ def build_decision_tree(args):
         return None
 
 def evaluate_decision_tree(args):
-    testset          = CommonUtils.load_dataset(args.testset_infile)
+    testset = CommonUtils.load_dataset(args.testset_infile)
 
     if not testset:
         return None
 
-    root             = CommonUtils.load_pickle(args.pickle_path)
+    root = CommonUtils.load_pickle(args.pickle_path)
 
     if not root:
         return None
 
-    predictions      =  CommonHelpers.predict_dataset(
-                            testset, lambda testset: testset.instances,
-                            root, predict
-                        )
+    predictions =  CommonHelpers.predict_dataset(
+                        testset, lambda testset: testset.instances,
+                        root, predict
+                    )
 
-    feature_names    = list(testset.feature_types.keys())
+    feature_names = list(testset.feature_types.keys())
 
-    confusion_matrix = {"TP": 0, "FN": 0, "FP": 0, "TN": 0}
-
-    accuracy, precision, recall = CommonHelpers.get_basic_metrics([getattr(instance, feature_names[-1]) for instance in testset.instances], predictions)
-
-    values_and_probs =  CommonHelpers.get_label_values_and_probs (
-                            root, testset,
-                            lambda testset: testset.instances,
-                            lambda instance: getattr(instance, feature_names[-1]),
-                            predict_prob_instance
-                        )
-
-    roc_auc = CommonHelpers.calc_roc_auc(*values_and_probs)
-
-    print(f"ROC-AUC: {round(roc_auc, 4)}")
+    accuracy, precision, recall, roc_auc = yield from CommonHelpers.get_metrics(
+        predictions,
+        [getattr(instance, feature_names[-1]) for instance in testset.instances],
+        root, testset,
+        lambda testset: testset.instances,
+        lambda instance: getattr(instance, feature_names[-1]),
+        predict_prob_instance
+    )
