@@ -84,20 +84,16 @@ def load_dataset(dataset_filepath, entropy_weights = [1.0, 1.0]):
                 if not dataset_contents:
                     CommonLogger.logger.log("[ERROR] Empty dataset file")
                     return None
-
-                DatasetSchema.configure_schema(dataset_contents, field_types, entropy_weights)
-
-                if len(dataset_contents) <= 1:
+                elif len(dataset_contents) <= 1:
                     CommonLogger.logger.log("[ERROR] Dataset doesn't have more than a single line")
                     return None
                 elif len(dataset_contents[1]) < len(field_types):
                     CommonLogger.logger.log("[ERROR] Dataset instance length doesn't match field types")
                     return None
 
-                first_instance = dataset_contents[1][1:]
+                DatasetSchema.configure_schema(dataset_contents, field_types, entropy_weights)
 
-                if not len(first_instance):
-                    print('XX')
+                first_instance = dataset_contents[1][1:]
 
                 for i, field in enumerate(first_instance):
                     try:
