@@ -1,4 +1,4 @@
-from common.Logger import logger
+import common.Logger as CommonLogger
 
 def calc_candidate_thresholds(dataset, feature_type):
     if not feature_type.is_numeric:
@@ -20,16 +20,16 @@ def calc_candidate_thresholds(dataset, feature_type):
 
 def predict_dataset(dataset, dataset_property_accessor, learning_output, prediction_function, *fargs):
     if not dataset:
-        print("[ERROR] predict_dataset(): dataset is None")
-        exit(1)
+        CommonLogger.logger.log("[ERROR] predict_dataset(): dataset is None")
+        return None
 
     if not learning_output:
-        print("[ERROR] predict_dataset(): learning_output is None")
-        exit(1)
+        CommonLogger.logger.log("[ERROR] predict_dataset(): learning_output is None")
+        return None
 
     if not prediction_function:
-        print("[ERROR] predict_dataset(): no prediction function supplied")
-        exit(1)
+        CommonLogger.logger.log("[ERROR] predict_dataset(): no prediction function supplied")
+        return None
 
     predictions = []
 
@@ -69,16 +69,16 @@ def get_basic_metrics(labels, predictions):
         recall    = (confusion_matrix["TP"] / preds_tp_fn)
         f1_score  = 2 * ( (precision * recall) / (precision + recall) )
 
-    logger.log(f"Accuracy: %{round(accuracy*100, 4)} ({preds_tp_tn}/{len(labels)})")
+    CommonLogger.logger.log(f"Accuracy: %{round(accuracy*100, 4)} ({preds_tp_tn}/{len(labels)})")
 
-    logger.log(f"True Positives: {confusion_matrix['TP']}/{len(labels)}")
-    logger.log(f"True Negatives: {confusion_matrix['TN']}/{len(labels)}")
-    logger.log(f"False Positives: {confusion_matrix['FP']}/{len(labels)}")
-    logger.log(f"False Negatives: {confusion_matrix['FN']}/{len(labels)}")
+    CommonLogger.logger.log(f"True Positives: {confusion_matrix['TP']}/{len(labels)}")
+    CommonLogger.logger.log(f"True Negatives: {confusion_matrix['TN']}/{len(labels)}")
+    CommonLogger.logger.log(f"False Positives: {confusion_matrix['FP']}/{len(labels)}")
+    CommonLogger.logger.log(f"False Negatives: {confusion_matrix['FN']}/{len(labels)}")
 
-    logger.log(f"Precision: %{round(precision * 100, 4)} ({confusion_matrix['TP']}/{preds_all_positive})")
-    logger.log(f"Recall: %{round(recall * 100, 4)} ({confusion_matrix['TP']}/{preds_tp_fn})")
-    logger.log(f"F1-Score: {round(f1_score, 4)}")
+    CommonLogger.logger.log(f"Precision: %{round(precision * 100, 4)} ({confusion_matrix['TP']}/{preds_all_positive})")
+    CommonLogger.logger.log(f"Recall: %{round(recall * 100, 4)} ({confusion_matrix['TP']}/{preds_tp_fn})")
+    CommonLogger.logger.log(f"F1-Score: {round(f1_score, 4)}")
     yield
 
     # maybe return confusion matrix too, if need be
@@ -89,16 +89,16 @@ def get_label_values_and_probs(learning_output, dataset, dataset_property_access
     y_probs = []
 
     if not dataset:
-        print("[ERROR] get_label_values_and_probs(): dataset is None")
-        exit(1)
+        CommonLogger.logger.log("[ERROR] get_label_values_and_probs(): dataset is None")
+        return None
 
     if not learning_output:
-        print("[ERROR] get_label_values_and_probs(): learning_output is None")
-        exit(1)
+        CommonLogger.logger.log("[ERROR] get_label_values_and_probs(): learning_output is None")
+        return None
 
     if not probability_function:
-        print("[ERROR] get_label_values_and_probs(): no probability function supplied")
-        exit(1)
+        CommonLogger.logger.log("[ERROR] get_label_values_and_probs(): no probability function supplied")
+        return None
 
     for data in (dataset_property_accessor(dataset) if dataset_property_accessor else dataset):
         y_labels.append(1 if (data_label_accessor(data) if data_label_accessor else data) else 0)
@@ -136,8 +136,11 @@ def get_metrics(predictions, labels, learning_output, dataset, dataset_property_
                             probability_function, *fargs
                         )
 
+    if not values_and_probs:
+        return [None] * 4
+
     roc_auc = calc_roc_auc(*values_and_probs)
-    logger.log(f"ROC-AUC: {round(roc_auc, 4)}\n")
+    CommonLogger.logger.log(f"ROC-AUC: {round(roc_auc, 4)}\n")
     yield
 
     return accuracy, precision, recall, roc_auc

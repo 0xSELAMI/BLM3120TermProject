@@ -2,7 +2,7 @@ import os
 import pickle
 from collections import Counter
 
-from common.Logger import logger
+import common.Logger as CommonLogger
 import common.Utils as CommonUtils
 import common.Discretizer as Discretizer
 
@@ -28,7 +28,7 @@ def generate_candidates(F_prev, k):
     for i in range(setcount):
         itemset_i = itemsets[i]
 
-        logger.log(infostr + f"{i}/{setcount}")
+        CommonLogger.logger.log(infostr + f"{i}/{setcount}")
         yield
 
         for j in range(i + 1, setcount):
@@ -51,7 +51,7 @@ def prune_candidates(candidates, F_prev):
     candidate_count = len(candidates)
 
     for i, candidate in enumerate(candidates):
-        logger.log(infostr + f"{i}/{candidate_count}")
+        CommonLogger.logger.log(infostr + f"{i}/{candidate_count}")
         yield
 
         if all( (candidate - {item}) in set(F_prev.keys()) for item in candidate ):
@@ -74,7 +74,7 @@ def calc_candidate_counts(candidates, transactions, min_support):
     for i, t in enumerate(transactions):
         t_itemset = t["itemset"]
 
-        logger.log(infostr + f"{i}/{transaction_count}")
+        CommonLogger.logger.log(infostr + f"{i}/{transaction_count}")
         yield
 
         for candidate in candidates:
@@ -90,7 +90,7 @@ def calc_candidate_counts(candidates, transactions, min_support):
     return {candidate: count for candidate, count in counts.items() if (count / len(transactions) >= min_support)}
 
 def apriori(transactions, min_support, max_k):
-    logger.log("Collecting frequent itemsets with size 1")
+    CommonLogger.logger.log("Collecting frequent itemsets with size 1")
     yield
 
     F = [get_F1(transactions, min_support)]
@@ -133,7 +133,7 @@ def generate_rules(all_frequent_itemsets, transactions, min_support, min_confide
     }
 
     infostr = "Generating CARs..."
-    logger.log(infostr)
+    CommonLogger.logger.log(infostr)
 
     for i, Fk in enumerate(all_frequent_itemsets):
         sorted_Fk = sorted(Fk.items(), key=lambda x: str(x[0]))

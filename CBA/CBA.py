@@ -1,7 +1,7 @@
 #from common.Utils import load_dataset, move_cursor_up_and_clear_line, save_pickle, load_pickle
 import math
 import common.Utils as CommonUtils
-from common.Logger import logger
+import common.Logger as CommonLogger
 
 import common.Helpers as CommonHelpers
 import common.Discretizer as Discretizer
@@ -26,14 +26,14 @@ def generate_CARs(args):
         min_lift       = args.min_lift
         error_weights  = args.error_weights
 
-        logger.log(f"Running apriori algorithm... (max_k: {max_k}, min_support: {min_support}, min_confidence: {min_confidence}, min_lift: {min_lift})")
+        CommonLogger.logger.log(f"Running apriori algorithm... (max_k: {max_k}, min_support: {min_support}, min_confidence: {min_confidence}, min_lift: {min_lift})")
         yield
 
         # apriori returns all Fk where k in range (0, max_k)
         all_frequent_itemsets = yield from CBAHelpers.apriori(transactions, min_support, max_k)
 
         logger.backtrack(2)
-        logger.log(f"Collected frequent itemsets up to size {len(all_frequent_itemsets)}. (max_k: {max_k}, min_support: {min_support}, min_confidence: {min_confidence}), min_lift: {min_lift}\n")
+        CommonLogger.logger.log(f"Collected frequent itemsets up to size {len(all_frequent_itemsets)}. (max_k: {max_k}, min_support: {min_support}, min_confidence: {min_confidence}), min_lift: {min_lift}\n")
         yield
 
         all_rules, label_distribution = yield from CBAHelpers.generate_rules(all_frequent_itemsets, transactions, min_support, min_confidence, min_lift)
@@ -51,7 +51,7 @@ def generate_CARs(args):
         rules.append( default_rule )
 
         logger.backtrack(1)
-        logger.log(f"Generated {len(all_rules)} rules. Down to {len(rules)} after building the classifier.\n")
+        CommonLogger.logger.log(f"Generated {len(all_rules)} rules. Down to {len(rules)} after building the classifier.\n")
         yield
 
         out = {"rules": rules, "threshold_map": threshold_map, "trainset_label_ratios": label_distribution}
@@ -59,7 +59,7 @@ def generate_CARs(args):
         yield from CommonUtils.save_pickle(out, args.pickle_path, "class association rules and treshold map")
 
     except KeyboardInterrupt:
-        print("Received KeyboardInterrupt, exiting.")
+        CommonLogger.logger.log("Received KeyboardInterrupt, exiting.")
         return None
 
 def predict(transaction, rules):
@@ -111,6 +111,9 @@ def evaluate_CARs(args):
                             rules, predict
                         )
 
+        if not predictions:
+            return None
+
         accuracy, precision, recall, roc_auc = yield from CommonHelpers.get_metrics(
                     predictions, [t["label"] for t in transactions], rules, transactions,
                     None, lambda transaction: transaction["label"],
@@ -118,5 +121,5 @@ def evaluate_CARs(args):
                 )
 
     except KeyboardInterrupt:
-        print("Received KeyboardInterrupt, exiting.")
-        exit(0)
+        CommonLogger.logger.log("Received KeyboardInterrupt, exiting.")
+        return

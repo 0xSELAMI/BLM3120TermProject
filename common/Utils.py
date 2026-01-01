@@ -7,7 +7,7 @@ import pickle
 from common.Dataset import DatasetSchema, Dataset
 from sklearn.model_selection import train_test_split
 
-from common.Logger import logger
+import common.Logger as CommonLogger
 
 # dataset field types ( excluding the first field which is user id )
 field_types = [str, int, str, str, int, int, float, str, int, bool, bool]
@@ -25,12 +25,16 @@ def process_dataset(args):
     if not dataset:
         return None
 
+    if args.ratio <= 0 or args.ratio >= 1:
+        CommonLogger.logger.log(f"[ERROR] Invalid testset to dataset ratio supplied: {args.ratio}, must be in range (0,1)")
+        return None
+
     testset, trainset = create_test_and_train_set(dataset, args.ratio)
 
     save_dataset(args.trainset_outfile, testset)
     save_dataset(args.testset_outfile, trainset)
 
-    logger.log("[INFO] Test and Train datasets successfully created")
+    CommonLogger.logger.log("[INFO] Test and Train datasets successfully created")
     yield
 
 def save_dataset(file_path, dataset):
@@ -61,7 +65,7 @@ def load_dataset(dataset_filepath, entropy_weights = [1.0, 1.0]):
     global field_types
 
     if not dataset_filepath:
-        logger.log("[ERROR] load_dataset: dataset_filepath cannot be None")
+        CommonLogger.logger.log("[ERROR] load_dataset: dataset_filepath cannot be None")
         return None
 
     norm_path = os.path.normpath(dataset_filepath)
@@ -77,7 +81,30 @@ def load_dataset(dataset_filepath, entropy_weights = [1.0, 1.0]):
                 reader = csv.reader(csvfile, delimiter=',')
                 dataset_contents = list(reader)
 
+                if not dataset_contents:
+                    CommonLogger.logger.log("[ERROR] Empty dataset file")
+                    return None
+
                 DatasetSchema.configure_schema(dataset_contents, field_types, entropy_weights)
+
+                if len(dataset_contents) <= 1:
+                    CommonLogger.logger.log("[ERROR] Dataset doesn't have more than a single line")
+                    return None
+                elif len(dataset_contents[1]) < len(field_types):
+                    CommonLogger.logger.log("[ERROR] Dataset instance length doesn't match field types")
+                    return None
+
+                first_instance = dataset_contents[1][1:]
+
+                if not len(first_instance):
+                    print('XX')
+
+                for i, field in enumerate(first_instance):
+                    try:
+                        field_types[i](field)
+                    except:
+                        CommonLogger.logger.log("[ERROR] Dataset isn't compatible with the supplied field types")
+                        return None
 
                 dataset = Dataset([instance[1:] for instance in dataset_contents[1:]])
 
@@ -85,20 +112,20 @@ def load_dataset(dataset_filepath, entropy_weights = [1.0, 1.0]):
             dataset_contents = json.load(open(dataset_filepath))
 
             if not verify_dataset_format(dataset_contents):
-                logger.log("[ERROR] Malformed dataset")
+                CommonLogger.logger.log("[ERROR] Malformed dataset")
                 return None
 
             DatasetSchema.configure_schema(dataset_contents, field_types, entropy_weights)
 
             dataset = Dataset(dataset_contents['instances'])
         elif file_ext == '':
-            logger.log(f"[ERROR] Dataset file extension should be '.json' or '.csv'")
+            CommonLogger.logger.log(f"[ERROR] Dataset file extension should be '.json' or '.csv'")
             return None
         else:
-            logger.log(f"[ERROR] Supplied dataset file has unsupported extension: {filename}")
+            CommonLogger.logger.log(f"[ERROR] Supplied dataset file has unsupported extension: {filename}")
             return None
     except FileNotFoundError as e:
-        logger.log(f"[ERROR]{re.sub(r'\[Errno [0-9]+\]', '', str(e))}")
+        CommonLogger.logger.log(f"[ERROR]{re.sub(r'\[Errno [0-9]+\]', '', str(e))}")
         return None
 
     return dataset
@@ -139,7 +166,7 @@ def save_pickle(data, pickle_outfile, datatype):
     with open(out_path, "wb+") as f:
         pickle.dump(data, f)
 
-    logger.log(f"Pickled {datatype} into file: {out_path}")
+    CommonLogger.logger.log(f"Pickled {datatype} into file: {out_path}")
     yield
 
 def load_pickle(pickle_infile):
@@ -149,7 +176,7 @@ def load_pickle(pickle_infile):
         with open(pickle_infile, "rb") as f:
             data = pickle.load(f)
     except FileNotFoundError as e:
-        logger.log(f"[ERROR]{re.sub(r'\[Errno [0-9]+\]', '', str(e))}")
+        CommonLogger.logger.log(f"[ERROR]{re.sub(r'\[Errno [0-9]+\]', '', str(e))}")
         return None
 
     return data

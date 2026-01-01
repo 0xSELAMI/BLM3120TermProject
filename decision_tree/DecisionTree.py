@@ -1,6 +1,6 @@
 import common.Utils as CommonUtils
 import common.Helpers as CommonHelpers
-from common.Logger import logger
+import common.Logger as CommonLogger
 
 import decision_tree.DecisionTreeHelpers as DecisionTreeHelpers
 import decision_tree.TreeBuilder as TreeBuilder
@@ -70,22 +70,22 @@ def build_decision_tree(args):
     if not trainset:
         return None
 
-    logger.log("Building decision tree...", end = '\n\n')
+    CommonLogger.logger.log("Building decision tree...", end = '\n\n')
     yield
 
     try:
         root = yield from TreeBuilder.build_tree(trainset)
         logger.update_last("Building decision tree... Completed Successfully")
-        logger.log("Collapsing pure subtrees into leaves...")
+        CommonLogger.logger.log("Collapsing pure subtrees into leaves...")
         yield
 
         yield from TreeBuilder.collapse_pure_subtrees(root)
 
         yield from DecisionTreeHelpers.export_tree_to_dot(root, args.dot_outfile)
-        CommonUtils.save_pickle(root, args.pickle_path, "decision tree")
+        yield from CommonUtils.save_pickle(root, args.pickle_path, "decision tree")
 
     except KeyboardInterrupt:
-        print("Received KeyboardInterrupt, exiting.")
+        CommonLogger.logger.log("Received KeyboardInterrupt, exiting.")
         return None
 
 def evaluate_decision_tree(args):
@@ -103,6 +103,9 @@ def evaluate_decision_tree(args):
                         testset, lambda testset: testset.instances,
                         root, predict
                     )
+
+    if not predictions:
+        return None
 
     feature_names = list(testset.feature_types.keys())
 

@@ -1,7 +1,7 @@
 from common.Utils import move_cursor_up_and_clear_line
 from common.Dataset import Dataset
 
-from common.Logger import logger
+import common.Logger as CommonLogger
 
 from decision_tree.TreeNode import TreeNode
 
@@ -18,7 +18,7 @@ def build_tree(dataset, depth = 0):
     infostr += f"curdepth: {depth}\n"
     infostr += dataset.value_domains_repr() + '\n'
 
-    logger.log(infostr)
+    CommonLogger.logger.log(infostr)
     yield
     logger.backtrack(1)
 
@@ -124,6 +124,6 @@ def collapse_pure_subtrees(node):
     # all samples in scope have the same label
     node.n_pred = node.n_samples
 
-    yield
+    # yield
 
     return {pred}

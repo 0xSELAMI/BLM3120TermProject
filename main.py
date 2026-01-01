@@ -18,7 +18,7 @@ from naive_bayesian.NaiveBayesian import build_naive_bayesian_classifier, evalua
 
 from defaults import *
 
-from GUI.gui import GUI
+import common.Logger as CommonLogger
 
 def create_process_dataset_argparser(parsers, subparsers):
     main_desc = "Create testset and trainset from supplied dataset"
@@ -134,7 +134,13 @@ def main():
         for _ in fnc(args):
             pass
 
+    CommonLogger.logger = CommonLogger.Logger(True if args.command == "GUI" else False)
+
     if args.command == "GUI":
+        from GUI.gui import GUI
+
+        #CommonLogger.logger = CommonLogger.Logger(is_gui = True)
+
         handlers = {}
         handlers["process_dataset"] = process_dataset
 
@@ -154,14 +160,12 @@ def main():
         project_gui.launch()
 
     elif args.command == "process_dataset":
-        #process_dataset(args)
         run_task(process_dataset)
 
     elif args.command == "decision_tree":
         if args.subcommand_decision_tree == "build":
             run_task(build_decision_tree)
         elif args.subcommand_decision_tree == "evaluate":
-            # drain the generator output, so things get printed
             run_task(evaluate_decision_tree)
         else:
             parsers["decision_tree"]["main_parser"].print_help()
@@ -185,4 +189,10 @@ def main():
         parser.print_help()
 
 if __name__ == "__main__":
+    # TODO visualization of rules, decision tree, probability table (easy)
+    # TODO ability to configure dataset field types and field-ignore idx for label, (easy)
+    # TODO proper dataset agnosticism, find 2 other classification datasets to try (?)
+    # TODO probably a good idea to have a few plots comparing the performances based on accuracy precision recall f1 and roc-auc, for each dataset if need be (?)
+    # TODO more comments here and there
+    # TODO write report and send it off (easy)
     main()

@@ -1,6 +1,6 @@
 from common.Dataset import Dataset
 from common.Utils import move_cursor_up_and_clear_line
-from common.Logger import logger
+import common.Logger as CommonLogger
 
 def extract_thresholds(dataset, segment_map, split_count):
     thresholds = []
@@ -101,14 +101,14 @@ def best_thresholds_for_feature(trainset, feature_name, max_split_count, min_bin
         outstr += f"best_thresholds: {best_thresholds}\nbest_cost: {round(best_cost, 6)}\n"
 
         if split_count < max_split_count:
-            logger.log(outstr)
+            CommonLogger.logger.log(outstr)
             yield
             logger.backtrack(1)
         else:
             outstr = f"Discretized feature: {feature_name}, split_count: {len(best_thresholds)}\n"
             outstr += f"best_thresholds: {best_thresholds}\nbest_cost: {round(best_cost, 6)}\n"
 
-            logger.log(outstr)
+            CommonLogger.logger.log(outstr)
             yield
 
     return best_thresholds
@@ -116,7 +116,7 @@ def best_thresholds_for_feature(trainset, feature_name, max_split_count, min_bin
 def best_thresholds_for_features(dataset, max_split_count, min_bin_frac, delta_cost):
     threshold_map = {}
 
-    logger.log(f"Discretizing features, max_split_count: {max_split_count}, min_bin_frac: {min_bin_frac}, delta_cost: {delta_cost}\n")
+    CommonLogger.logger.log(f"Discretizing features, max_split_count: {max_split_count}, min_bin_frac: {min_bin_frac}, delta_cost: {delta_cost}\n")
     yield
 
     for feature_name, feature_type in dataset.feature_types.items():

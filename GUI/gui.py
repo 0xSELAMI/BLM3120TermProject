@@ -8,7 +8,7 @@ from contextlib import redirect_stdout, redirect_stderr
 
 from GUI.layout_definition import layout_definition
 
-from common.Logger import logger
+import common.Logger as CommonLogger
 
 class ForwardArgs:
     def __init__(self, user, args):
@@ -16,7 +16,7 @@ class ForwardArgs:
 
         for name in args:
             if args[name] is None or args[name] == '':
-                logger.log(f"[ERROR] {user}(): {name} invalid")
+                CommonLogger.logger.log(f"[ERROR] {user}(): {name} invalid")
                 self.invalid = True
                 break
 
@@ -58,7 +58,7 @@ class GUI:
         return project_gui
 
     def generic_forward(self, handler_path, param_names, *values):
-        logger.clear()
+        CommonLogger.logger.clear()
 
         # build args dictionary
         args_dict = dict(zip(param_names, values))
@@ -81,16 +81,16 @@ class GUI:
 
                 if inspect.isgenerator(result):
                     for _ in result:
-                        yield logger.read_all()
+                        yield CommonLogger.logger.read_all()
 
-                #yield logger.read_all()
+                #yield CommonLogger.logger.read_all()
 
             except Exception:
-                logger.log("\n" + "="*20 + "\n[ERROR]\n" + "="*20)
-                logger.log(traceback.format_exc())
-                yield logger.read_all()
+                CommonLogger.logger.log("\n" + "="*20 + "\n[ERROR]\n" + "="*20)
+                CommonLogger.logger.log(traceback.format_exc())
+                yield CommonLogger.logger.read_all()
         else:
-            yield logger.read_all()
+            yield CommonLogger.logger.read_all()
 
     def render_layout(self, layout):
         with gr.Tab(layout["title"]):
