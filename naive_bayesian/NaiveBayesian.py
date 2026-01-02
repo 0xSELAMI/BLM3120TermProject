@@ -5,7 +5,7 @@ import common.Helpers as CommonHelpers
 import common.Discretizer as Discretizer
 from common.Transaction import apply_thresholds
 
-from common.Logger import logger
+import common.Logger as CommonLogger
 
 def get_prediction_scores(transaction, probability_table, label_counts, initial_scores):
     scores = initial_scores
@@ -32,7 +32,7 @@ def predict(transaction, probability_table, label_counts):
     return max(scores, key=scores.get)
 
 def prediction_probability_true(probability_table, transaction, label_counts):
-    scores = get_prediction_scores(transaction, probability_table, label_counts, {True: 0, False: 0})
+    scores = get_prediction_scores(transaction, probability_table, label_counts, {label: math.log(label_counts[label] / sum([label_counts[label] for label in label_counts.keys()])) for label in label_counts.keys()} )
 
     max_score = max(scores.values())
 
@@ -75,11 +75,9 @@ def build_naive_bayesian_classifier(args):
         out = {"probability_table" : probability_table, "threshold_map": threshold_map, "label_counts": label_counts}
         yield from CommonUtils.save_pickle(out, args.pickle_path, "naive bayesian classifier probability table and threshold map")
 
-        yield
-
     except KeyboardInterrupt:
-        print("Received KeyboardInterrupt, exiting.")
-        exit(0)
+        CommonLogger.logger.log("Received KeyboardInterrupt, exiting.")
+        return
 
 def evaluate_naive_bayesian_classifier(args):
     try:
@@ -113,5 +111,33 @@ def evaluate_naive_bayesian_classifier(args):
                 None, lambda transaction: transaction["label"], prediction_probability_true, label_counts)
 
     except KeyboardInterrupt:
-        print("Received KeyboardInterrupt, exiting.")
-        exit(0)
+        CommonLogger.logger.log("Received KeyboardInterrupt, exiting.")
+        return
+
+def visualize_naive_bayesian_classifier(args):
+    pickled_data      = CommonUtils.load_pickle(args.pickle_path)
+
+    if not pickled_data:
+        return
+
+    probability_table = pickled_data["probability_table"]
+    label_counts      = pickled_data["label_counts"]
+
+    total = sum([label_counts[label] for label in label_counts])
+
+    prob_table_arr = []
+
+    for fname in probability_table:
+        for fval in probability_table[fname]:
+            for label in probability_table[fname][fval]:
+                prob_table_arr.append({"fname": fname, "fval": fval, "label": label, "prob": probability_table[fname][fval][label] / label_counts[label]})
+
+    #prob_table_arr.sort(key=lambda x: (x["fval"], -x["prob"], x["fname"], x["label"])) 
+    prob_table_arr.sort(key=lambda x: (-x["prob"], x["fval"], x["label"])) 
+
+    for entry in prob_table_arr:
+        fname = entry["fname"]
+        fval  = entry["fval"]
+        label = entry["label"]
+        prob  = entry["prob"]
+        CommonLogger.logger.log(f"| Feature: {fname:<25} | Value: {str(fval):<40} | Label: {str(label):<5} | P(feature | label): {str(round(prob, 6)):<8} | ")

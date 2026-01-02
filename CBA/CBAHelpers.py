@@ -37,8 +37,7 @@ def generate_candidates(F_prev, k):
             if len(candidate) == k:
                 candidates.add(candidate)
 
-        logger.backtrack(1)
-        #CommonUtils.move_cursor_up_and_clear_line(1)
+        CommonLogger.logger.backtrack(1)
 
     return TransactionItemset(candidates)
 
@@ -57,8 +56,7 @@ def prune_candidates(candidates, F_prev):
         if all( (candidate - {item}) in set(F_prev.keys()) for item in candidate ):
             pruned.add(candidate)
 
-        logger.backtrack(1)
-        #CommonUtils.move_cursor_up_and_clear_line(1)
+        CommonLogger.logger.backtrack(1)
 
     return TransactionItemset(pruned)
 
@@ -84,8 +82,7 @@ def calc_candidate_counts(candidates, transactions, min_support):
             if candidate.issubset(t_itemset):
                 counts[candidate] += 1
 
-        logger.backtrack(1)
-        #CommonUtils.move_cursor_up_and_clear_line(1)
+        CommonLogger.logger.backtrack(1)
 
     return {candidate: count for candidate, count in counts.items() if (count / len(transactions) >= min_support)}
 
@@ -100,17 +97,17 @@ def apriori(transactions, min_support, max_k):
     infostr = f"Collecting frequent itemsets with size"
 
     while F[k - 2] and k <= max_k:
-        logger.update_last(infostr + f" {k} : generating candidates")
+        CommonLogger.logger.update_last(infostr + f" {k} : generating candidates")
         yield
 
         candidates_k = yield from generate_candidates(F[k - 2], k)
 
-        logger.update_last(infostr + f" {k} : pruning candidates")
+        CommonLogger.logger.update_last(infostr + f" {k} : pruning candidates")
         yield
 
         candidates_k = yield from prune_candidates(candidates_k, F[k - 2])
 
-        logger.update_last(infostr + f" {k} : counting candidate occurances in transactions")
+        CommonLogger.logger.update_last(infostr + f" {k} : counting candidate occurances in transactions")
         yield
         Fk = yield from calc_candidate_counts(candidates_k, transactions, min_support)
 
@@ -137,7 +134,7 @@ def generate_rules(all_frequent_itemsets, transactions, min_support, min_confide
 
     for i, Fk in enumerate(all_frequent_itemsets):
         sorted_Fk = sorted(Fk.items(), key=lambda x: str(x[0]))
-        logger.update_last(infostr + f" processing {i+1}-item frequent itemsets with {len(Fk)} itemsets")
+        CommonLogger.logger.update_last(infostr + f" processing {i+1}-item frequent itemsets with {len(Fk)} itemsets")
         yield
 
         # for every itemset in the current frequent itemset
@@ -167,6 +164,7 @@ def generate_rules(all_frequent_itemsets, transactions, min_support, min_confide
 
                 lift = confidence / label_supports[label]
 
+                # laplace smoothing using label probability ratios
                 p = label_supports[label]
                 m = (1 - label_supports[label]) / label_supports[label]
                 m_estimate = (count_X_y + (m * p)) / (count_X + m)
@@ -183,7 +181,7 @@ def generate_rules(all_frequent_itemsets, transactions, min_support, min_confide
                 if current_rule["lift"] <= min_lift:
                     continue
 
-                #This rule must be 50% more likely than a random guess for that class.
+                # rule must be 50% more likely than a random guess for a true label.
                 if (
                     current_rule["m_estimate"] < (label_supports[label] * 2) and
                     current_rule["label"] == True
@@ -191,8 +189,6 @@ def generate_rules(all_frequent_itemsets, transactions, min_support, min_confide
                     continue
 
                 rules.append(current_rule)
-
-        #CommonUtils.move_cursor_up_and_clear_line(1)
 
     return rules, label_supports
 

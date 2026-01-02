@@ -1,5 +1,4 @@
 from common.Dataset import Dataset
-from common.Utils import move_cursor_up_and_clear_line
 import common.Logger as CommonLogger
 
 def extract_thresholds(dataset, segment_map, split_count):
@@ -103,7 +102,7 @@ def best_thresholds_for_feature(trainset, feature_name, max_split_count, min_bin
         if split_count < max_split_count:
             CommonLogger.logger.log(outstr)
             yield
-            logger.backtrack(1)
+            CommonLogger.logger.backtrack(1)
         else:
             outstr = f"Discretized feature: {feature_name}, split_count: {len(best_thresholds)}\n"
             outstr += f"best_thresholds: {best_thresholds}\nbest_cost: {round(best_cost, 6)}\n"

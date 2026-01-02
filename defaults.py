@@ -18,11 +18,11 @@ default_dot_outfile = "dotfiles/decisiontree.dot"
 default_decision_tree_pickle_path = "decision_tree/decisiontree.pickle"
 
 # CBA
-default_max_k           = 4
-default_min_support     = 1e-3
-default_min_confidence  = 0.27
-default_min_lift        = 1.20
-default_error_weights   = [1.0, 1.5] # a false negative is %50 worse than a false positive
+default_max_k           = 5
+default_min_support     = 2e-4
+default_min_confidence  = 0.2
+default_min_lift        = 1.05
+default_error_weights   = [1.0, 2.5] # a false negative is %50 worse than a false positive
 
 default_CBA_pickle_path = "CBA/rules.pickle"
 

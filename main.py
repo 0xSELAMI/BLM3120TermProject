@@ -10,11 +10,11 @@ from common.Dataset import DatasetSchema, Dataset
 
 from common.Utils import save_dataset, load_dataset, process_dataset, create_test_and_train_set
 
-from decision_tree.DecisionTree import build_decision_tree, evaluate_decision_tree
+from decision_tree.DecisionTree import build_decision_tree, evaluate_decision_tree, visualize_decision_tree
 
-from CBA.CBA import generate_CARs, evaluate_CARs
+from CBA.CBA import generate_CARs, evaluate_CARs, visualize_CARs
 
-from naive_bayesian.NaiveBayesian import build_naive_bayesian_classifier, evaluate_naive_bayesian_classifier
+from naive_bayesian.NaiveBayesian import build_naive_bayesian_classifier, evaluate_naive_bayesian_classifier, visualize_naive_bayesian_classifier
 
 from defaults import *
 
@@ -134,12 +134,11 @@ def main():
         for _ in fnc(args):
             pass
 
+    # instantiate shared logger
     CommonLogger.logger = CommonLogger.Logger(True if args.command == "GUI" else False)
 
     if args.command == "GUI":
         from GUI.gui import GUI
-
-        #CommonLogger.logger = CommonLogger.Logger(is_gui = True)
 
         handlers = {}
         handlers["process_dataset"] = process_dataset
@@ -147,14 +146,17 @@ def main():
         handlers["decision_tree"] = {}
         handlers["decision_tree"]["build"] = build_decision_tree
         handlers["decision_tree"]["evaluate"] = evaluate_decision_tree
+        handlers["decision_tree"]["visualize"] = visualize_decision_tree
 
         handlers["CBA"] = {}
         handlers["CBA"]["generate"] = generate_CARs
         handlers["CBA"]["evaluate"] = evaluate_CARs
+        handlers["CBA"]["visualize"] = visualize_CARs
 
         handlers["naive_bayesian"] = {}
         handlers["naive_bayesian"]["build"] = build_naive_bayesian_classifier
         handlers["naive_bayesian"]["evaluate"] = evaluate_naive_bayesian_classifier
+        handlers["naive_bayesian"]["visualize"] = visualize_naive_bayesian_classifier
 
         project_gui = GUI(handlers)
         project_gui.launch()
@@ -189,7 +191,6 @@ def main():
         parser.print_help()
 
 if __name__ == "__main__":
-    # TODO visualization of rules, decision tree, probability table (easy)
     # TODO ability to configure dataset field types and field-ignore idx for label, (easy)
     # TODO proper dataset agnosticism, find 2 other classification datasets to try (?)
     # TODO probably a good idea to have a few plots comparing the performances based on accuracy precision recall f1 and roc-auc, for each dataset if need be (?)

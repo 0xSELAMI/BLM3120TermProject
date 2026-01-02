@@ -1,4 +1,3 @@
-from common.Utils import move_cursor_up_and_clear_line
 from common.Dataset import Dataset
 
 import common.Logger as CommonLogger
@@ -20,7 +19,7 @@ def build_tree(dataset, depth = 0):
 
     CommonLogger.logger.log(infostr)
     yield
-    logger.backtrack(1)
+    CommonLogger.logger.backtrack(1)
 
     if dataset.is_empty:
         return TreeNode(is_leaf=True, prediction=False, n_samples=0, n_pred=0)

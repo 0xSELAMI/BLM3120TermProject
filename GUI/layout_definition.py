@@ -1,5 +1,7 @@
 from defaults import *
 
+from GUI.decision_tree_visualizer import decision_tree_visualizer_js
+
 DISCRETIZER_FIELDS = [
     {"id": "entropy_weights", "label": "Entropy Weights", "info":"Entropy weights for true and false labels respectively", "value":','.join((str(default_entropy_weights)[1:-1]).split(", "))},
     {"id": "max_split_count", "label": "Max Split Count", "type": "number", "value": default_max_split_count, "info": "Max split count to consider while discretizing numeric features"},
@@ -9,6 +11,7 @@ DISCRETIZER_FIELDS = [
 
 PREPROCESS_DATASET = {
     "title": "Preprocess Dataset",
+    "tab_id": "process_dataset",
     "handler": "process_dataset",
     "sections": [
         {
@@ -27,6 +30,7 @@ PREPROCESS_DATASET = {
 
 DECISION_TREE = {
     "title": "Decision Tree Classifier",
+    "tab_id": "decision_tree",
     "subtabs": [
         {
             "title": "Build",
@@ -81,12 +85,29 @@ DECISION_TREE = {
                     ]
                 }
             ]
+        },
+        {
+            "title": "Visualize",
+            "handler": "decision_tree.visualize",
+            "hide_output_group": True,
+            "outputs_to": "viz_out",
+            "btn_on_top": True,
+            "sections": [
+                {
+                    "layout": "column",
+                    "fields": [
+                        {"id": "dotfile", "label": "Dotfile Path", "type": "path", "value": default_dot_outfile, "info":"Path to read decision tree dotfile from"},
+                        {"id": "viz_out", "label": "Output", "type": "html", "js_on_load": decision_tree_visualizer_js, "interactive": False, "not_an_input": True},
+                    ]
+                }
+            ]
         }
     ]
 }
 
 CBA = {
     "title": "CBA Classifier",
+    "tab_id": "CBA",
     "subtabs": [
         {
             "title": "Generate",
@@ -143,12 +164,29 @@ CBA = {
                     ]
                 }
             ]
+        },
+        {
+            "title": "Visualize",
+            "handler": "CBA.visualize",
+            "hide_output_group": True,
+            "outputs_to": "viz_out",
+            "btn_on_top": True,
+            "sections": [
+                {
+                    "layout": "column",
+                    "fields": [
+                        {"id": "pickle_path", "label": "Pickle Path", "type": "path", "value": default_CBA_pickle_path, "info":"Path to read pickled rules from"},
+                        {"id": "viz_out", "label": "Output", "type": "code", "interactive": False, "not_an_input": True},
+                    ]
+                }
+            ]
         }
     ]
 }
 
 NAIVE_BAYESIAN = {
     "title": "Naive Bayesian Classifier",
+    "tab_id": "naive_bayesian",
     "subtabs": [
         {
             "title": "Build",
@@ -192,6 +230,22 @@ NAIVE_BAYESIAN = {
                     "fields": [
                         {"id": "testset_infile", "label": "Testset Path", "type": "path", "value": default_testset_path},
                         {"id": "pickle_path", "label": "Pickle Path", "type": "path", "value": default_naive_bayesian_pickle_path, "info":"Path to read pickled probability table from"},
+                    ]
+                }
+            ]
+        },
+        {
+            "title": "Visualize",
+            "handler": "naive_bayesian.visualize",
+            "hide_output_group": True,
+            "outputs_to": "viz_out",
+            "btn_on_top": True,
+            "sections": [
+                {
+                    "layout": "column",
+                    "fields": [
+                        {"id": "pickle_path", "label": "Pickle Path", "type": "path", "value": default_naive_bayesian_pickle_path, "info":"Path to read pickled probability table from"},
+                        {"id": "viz_out", "label": "Output", "type": "code", "interactive": False, "not_an_input": True},
                     ]
                 }
             ]

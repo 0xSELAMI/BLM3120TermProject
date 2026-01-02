@@ -12,13 +12,6 @@ import common.Logger as CommonLogger
 # dataset field types ( excluding the first field which is user id )
 field_types = [str, int, str, str, int, int, float, str, int, bool, bool]
 
-def move_cursor_up_and_clear_line(times):
-    cursorup = '\033[F'
-    clear    = '\033[K'
-
-    for _ in range(times):
-        print(cursorup+clear, end='')
-
 def process_dataset(args):
     dataset = load_dataset(args.dataset)
 
@@ -31,8 +24,8 @@ def process_dataset(args):
 
     testset, trainset = create_test_and_train_set(dataset, args.ratio)
 
-    save_dataset(args.trainset_outfile, testset)
-    save_dataset(args.testset_outfile, trainset)
+    save_dataset(args.testset_outfile, testset)
+    save_dataset(args.trainset_outfile, trainset)
 
     CommonLogger.logger.log("[INFO] Test and Train datasets successfully created")
     yield

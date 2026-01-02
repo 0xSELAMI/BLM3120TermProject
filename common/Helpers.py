@@ -14,7 +14,7 @@ def calc_candidate_thresholds(dataset, feature_type):
     candidates = []
 
     for i in range(len(unique_values) - 1):
-        candidates.append( (unique_values[i] + unique_values[i + 1]) / 2 )
+        candidates.append( round((unique_values[i] + unique_values[i + 1]) / 2, 6) )
 
     return candidates
 

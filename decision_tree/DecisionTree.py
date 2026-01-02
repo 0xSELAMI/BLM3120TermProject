@@ -75,7 +75,7 @@ def build_decision_tree(args):
 
     try:
         root = yield from TreeBuilder.build_tree(trainset)
-        logger.update_last("Building decision tree... Completed Successfully")
+        CommonLogger.logger.update_last("Building decision tree... Completed Successfully")
         CommonLogger.logger.log("Collapsing pure subtrees into leaves...")
         yield
 
@@ -117,3 +117,15 @@ def evaluate_decision_tree(args):
         lambda instance: getattr(instance, feature_names[-1]),
         predict_prob_instance
     )
+
+def visualize_decision_tree(args):
+    import graphviz
+    import GUI.decision_tree_visualizer as visualizer
+
+    # Load and convert dot to SVG string
+    src = graphviz.Source.from_file(args.dotfile)
+    svg_data = src.pipe(format='svg').decode('utf-8')
+
+    html_content = visualizer.get_interactive_tree_html(svg_data)
+
+    CommonLogger.logger.log(html_content)

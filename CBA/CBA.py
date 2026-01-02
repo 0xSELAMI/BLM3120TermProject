@@ -1,4 +1,3 @@
-#from common.Utils import load_dataset, move_cursor_up_and_clear_line, save_pickle, load_pickle
 import math
 import common.Utils as CommonUtils
 import common.Logger as CommonLogger
@@ -6,7 +5,7 @@ import common.Logger as CommonLogger
 import common.Helpers as CommonHelpers
 import common.Discretizer as Discretizer
 
-from common.Transaction import apply_thresholds
+from common.Transaction import TransactionItemset, apply_thresholds
 
 import CBA.CBAHelpers as CBAHelpers
 
@@ -32,7 +31,7 @@ def generate_CARs(args):
         # apriori returns all Fk where k in range (0, max_k)
         all_frequent_itemsets = yield from CBAHelpers.apriori(transactions, min_support, max_k)
 
-        logger.backtrack(2)
+        CommonLogger.logger.backtrack(2)
         CommonLogger.logger.log(f"Collected frequent itemsets up to size {len(all_frequent_itemsets)}. (max_k: {max_k}, min_support: {min_support}, min_confidence: {min_confidence}), min_lift: {min_lift}\n")
         yield
 
@@ -50,7 +49,7 @@ def generate_CARs(args):
         rules, default_rule = CBAHelpers.build_classifier(all_rules, transactions, error_weights)
         rules.append( default_rule )
 
-        logger.backtrack(1)
+        CommonLogger.logger.backtrack(1)
         CommonLogger.logger.log(f"Generated {len(all_rules)} rules. Down to {len(rules)} after building the classifier.\n")
         yield
 
@@ -123,3 +122,19 @@ def evaluate_CARs(args):
     except KeyboardInterrupt:
         CommonLogger.logger.log("Received KeyboardInterrupt, exiting.")
         return
+
+def visualize_CARs(args):
+    pickled_data   = CommonUtils.load_pickle(args.pickle_path)
+
+    if not pickled_data:
+        return None
+
+    rules = pickled_data["rules"]
+
+    # last rule is the default rule
+    for i, rule in enumerate(rules[:-1]):
+        rule_str = f"| [ {TransactionItemset(rule["itemset"]).compact_repr():<140} ] | "
+        rule_str += f"label: {str(rule['label']):<5} | "
+        rule_str += f"confidence: {str(round(rule['confidence'], 4)):<6} | "
+        rule_str += f"support: {str(round(rule['support'], 4)):<6} | "
+        CommonLogger.logger.log(rule_str)

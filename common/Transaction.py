@@ -6,6 +6,9 @@ class TransactionItem:
     def __repr__(self):
         return f"TransactionItem(\"{self.feature_name}\", \"{self.rule_format}\")"
 
+    def compact_repr(self):
+        return f"({self.rule_format})"
+
     def __eq__(self, other):
         if isinstance(other, type(self)):
             return (self.feature_name == other.feature_name) and (self.rule_format == other.rule_format)
@@ -31,6 +34,15 @@ class TransactionItemset:
         sorted_items = sorted(list(self.items), key=lambda x: str(x))
         ret = "TransactionItemset([" + ", ".join(str(item) for item in sorted_items) + "])"
         return ret
+
+    def compact_repr(self):
+        sorted_items = sorted(list(self.items), key=lambda x: str(x) if type(x) != TransactionItem else x.compact_repr())
+        str_items = []
+
+        for item in sorted_items:
+            str_items.append(str(item) if type(item) != TransactionItem else item.compact_repr())
+
+        return ", ".join(str_items)
 
     def add(self, item):
         if item not in self.items:
