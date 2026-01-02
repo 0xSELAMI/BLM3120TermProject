@@ -1,5 +1,6 @@
 import math
 
+import builtins
 from collections import Counter
 
 from common.Instance import Instance
@@ -8,32 +9,47 @@ from common.Features import FeatureType, FeatureFilter
 class DatasetSchema:
     feature_types   = None
     entropy_weights = None
+    label_idx       = None
 
     def __init__(self):
-        if DatasetSchema.feature_types is None or DatasetSchema.entropy_weights is None:
+        if DatasetSchema.feature_types is None or DatasetSchema.entropy_weights is None or DatasetSchema.label_idx is None:
             raise ValueError("Dataset Schema is not configured")
 
     @staticmethod
-    def configure_schema(dataset_contents, field_types, entropy_weights):
+    def configure_schema(dataset_contents, field_types = None, entropy_weights = [1.0, 1.0], label_idx = None):
         DatasetSchema.entropy_weights = entropy_weights
+        DatasetSchema.label_idx       = label_idx
 
         if type(dataset_contents) == list:
-            # getting field names from first line and
-            # trimming user_id's from the rest of the instances
-            field_descriptions = zip(dataset_contents[0][1:], field_types)
-            dataset_contents = [instance[1:] for instance in dataset_contents[1:]]
+            # getting field names from first line,
+            # then discarding the first line
+            field_descriptions = dict(zip(dataset_contents[0], field_types))
+
+            dataset_contents = dataset_contents[1:]
 
         elif type(dataset_contents) == dict:
-            field_descriptions = zip(dataset_contents["field_names"], field_types)
+            #field_descriptions = zip(dataset_contents["field_names"], field_types)
+            field_descriptions = dataset_contents["field_descriptions"]
+            DatasetSchema.label_idx = dataset_contents["label_idx"]
+
+            for i in range(len(field_descriptions)):
+                try:
+                    key, val = list(field_descriptions.items())[i]
+                    field_descriptions[key] = (getattr(builtins, val))
+
+                except AttributeError:
+                    CommonLogger.logger.log(f"[ERROR] invalid field description in dataset")
+                    return None
+
             dataset_contents = dataset_contents["instances"]
 
         else:
             raise ValueError(f"Invalid dataset contents type: {type(dataset_contents)}")
 
         DatasetSchema.feature_types = {
-            field_description[0]: FeatureType(
-                field_description, [i[desc_idx] for i in dataset_contents]
-                ) for desc_idx, field_description in enumerate(field_descriptions)
+            name: FeatureType(
+                [name, field_descriptions[name]], [i[desc_idx] for i in dataset_contents]
+                ) for desc_idx, name in enumerate(field_descriptions.keys())
         }
 
 class Dataset(DatasetSchema):
@@ -73,7 +89,7 @@ class Dataset(DatasetSchema):
 
                     instance_dict[field_name] = field_type(int(f)) if field_type == bool else field_type(f)
 
-                self.instances.append(Instance(instance_dict))
+                self.instances.append(Instance(instance_dict, self.label_idx))
 
         self.size = len(self.instances)
 

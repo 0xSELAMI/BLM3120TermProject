@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import sys
+import inspect
 import argparse
 
 from common.Instance import Instance
@@ -28,6 +29,12 @@ def create_process_dataset_argparser(parsers, subparsers):
     parsers["process_dataset"].add_argument("--ratio", "-r", metavar='RATIO', help=f"ratio of the size of the testset to the size of whole dataset (default: {default_testset_trainset_ratio})", default=default_testset_trainset_ratio, type=float)
     parsers["process_dataset"].add_argument("--trainset-outfile", metavar='TRAINSET_OUTPATH', help=f"default: {default_trainset_path}", default=default_trainset_path, type=str)
     parsers["process_dataset"].add_argument("--testset-outfile", metavar='TESTSET_OUTPATH', help=f"default: {default_testset_path}", default=default_testset_path, type=str)
+
+    parsers["process_dataset"].add_argument("--field-types", nargs="+", metavar='FIELD_TYPES', help=f"data types an instances of the dataset consist of, given sequentially. default: {default_field_types}", default=default_field_types, type=str)
+
+    parsers["process_dataset"].add_argument("--ignore-indices", nargs="+", metavar='IGNORE_INDICES', help=f"field indices to exclude from resulting datasets, -1 includes everything. default: {default_ignore_indices}", default=default_ignore_indices, type=int)
+
+    parsers["process_dataset"].add_argument("--label-idx", metavar='LABEL_IDX', help=f"default: {default_label_idx}", default=default_label_idx, type=int)
 
 def create_decision_tree_argparser(parsers, subparsers, parent_parsers):
     main_desc  = "Build or evaluate a decision tree"
@@ -131,8 +138,10 @@ def main():
 
     # generator drainer
     def run_task(fnc):
-        for _ in fnc(args):
-            pass
+        ret = fnc(args)
+        if inspect.isgenerator(ret):
+            for _ in fnc(args):
+                pass
 
     # instantiate shared logger
     CommonLogger.logger = CommonLogger.Logger(True if args.command == "GUI" else False)
@@ -191,9 +200,8 @@ def main():
         parser.print_help()
 
 if __name__ == "__main__":
-    # TODO ability to configure dataset field types and field-ignore idx for label, (easy)
-    # TODO proper dataset agnosticism, find 2 other classification datasets to try (?)
-    # TODO probably a good idea to have a few plots comparing the performances based on accuracy precision recall f1 and roc-auc, for each dataset if need be (?)
-    # TODO more comments here and there
-    # TODO write report and send it off (easy)
+    # TODO a tab for accuracy precision recall f1 and roc-auc comparison plots(?)
+    # TODO find 2 other classification datasets to try (?)
+    # TODO more comments
+    # TODO write report
     main()

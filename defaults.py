@@ -37,3 +37,6 @@ default_delta_cost      = 1e-3
 # all
 default_entropy_weights = [3.0, 1.0]
 default_dataset_path = "dataset/spotify_churn_dataset.csv"
+default_field_types = [t.__name__ for t in [int, str, int, str, str, int, int, float, str, int, bool, bool]]
+default_label_idx = len(default_field_types) - 1
+default_ignore_indices = [0]

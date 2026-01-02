@@ -15,16 +15,29 @@ PREPROCESS_DATASET = {
     "handler": "process_dataset",
     "sections": [
         {
-            "layout": "group",
-            "fields": [
-                {"id": "dataset", "label": "Dataset", "type": "path", "value": default_dataset_path},
-                {"id": "testset_outfile", "label": "Testset Output Path", "type": "path", "value": default_testset_path},
-                {"id": "trainset_outfile", "label": "Trainset Output Path", "type": "path", "value": default_trainset_path},
+            "layout": "row",
+            "sections": [
                 {
-                    "id": "ratio", "label": "Testset/Dataset Ratio", "type": "number", "value": default_testset_trainset_ratio, "info": f"({default_testset_trainset_ratio} corresponds to trainset with {1 - default_testset_trainset_ratio} ratio)"
+                    "layout": "group",
+                    "fields": [
+                        {"id": "dataset", "label": "Dataset", "type": "path", "value": default_dataset_path},
+                        {"id": "testset_outfile", "label": "Testset Output Path", "type": "path", "value": default_testset_path},
+                        {"id": "trainset_outfile", "label": "Trainset Output Path", "type": "path", "value": default_trainset_path},
+                        {
+                            "id": "ratio", "label": "Testset/Dataset Ratio", "type": "number", "value": default_testset_trainset_ratio, "info": f"({default_testset_trainset_ratio} corresponds to trainset with {1 - default_testset_trainset_ratio} ratio)"
+                        },
+                    ]
                 },
+                {
+                    "layout": "group",
+                    "fields": [
+                        {"id": "field_types", "label": "Dataset Field Types", "info":"the sequential data types that instances in the dataset consist of", "value": ','.join((str(default_field_types)[1:-1]).replace("'", "").split(", "))},
+                        {"id": "ignore_indices", "label": "Ignored Field Indices", "info":"Comma seperated field indices to exclude from the resulting datasets (-1 to includes everything)", "value": ','.join((str(default_ignore_indices)[1:-1]).split(", "))},
+                        {"id": "label_idx", "label": "Label Index", "info":"Field idx of the target class", "type": "number", "value": default_label_idx},
+                    ]
+                }
             ]
-        },
+        }
     ]
 }
 

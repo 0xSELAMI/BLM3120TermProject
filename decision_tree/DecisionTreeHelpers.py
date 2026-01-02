@@ -74,9 +74,11 @@ def evaluate_info_gains(dataset, use_gini=False):
     best_split = None
 
     feature_names = list(dataset.feature_types.keys())
-    label_name = feature_names[-1]
 
-    for fname in feature_names[:-1]:
+    feature_names_nolabel = list(feature_names)
+    feature_names_nolabel.pop(dataset.label_idx)
+
+    for fname in feature_names_nolabel:
         ftype = dataset.feature_types[fname]
 
         if ftype.is_numeric:

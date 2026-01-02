@@ -111,8 +111,9 @@ def apply_thresholds(dataset, threshold_map):
     for instance in dataset.instances:
         items = []
         feature_types = list(dataset.feature_types.values())
-        label = feature_types[-1]
-        feature_types = feature_types[:-1]
+        label = feature_types[dataset.label_idx]
+
+        feature_types.pop(dataset.label_idx)
 
         for i, feature_type in enumerate(feature_types):
             feature_name = feature_type.name
