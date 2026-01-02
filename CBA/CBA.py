@@ -19,11 +19,12 @@ def generate_CARs(args):
         threshold_map         = yield from Discretizer.best_thresholds_for_features(trainset, args.max_split_count, args.min_bin_frac, args.delta_cost)
         transactions          = apply_thresholds(trainset, threshold_map)
         
-        max_k          = args.max_k
-        min_support    = args.min_support
-        min_confidence = args.min_confidence
-        min_lift       = args.min_lift
-        error_weights  = args.error_weights
+        max_k              = args.max_k
+        min_support        = args.min_support
+        min_confidence     = args.min_confidence
+        min_lift           = args.min_lift
+        error_weights      = args.error_weights
+        m_estimate_weights = args.m_estimate_weights
 
         CommonLogger.logger.log(f"Running apriori algorithm... (max_k: {max_k}, min_support: {min_support}, min_confidence: {min_confidence}, min_lift: {min_lift})")
         yield
@@ -35,7 +36,7 @@ def generate_CARs(args):
         CommonLogger.logger.log(f"Collected frequent itemsets up to size {len(all_frequent_itemsets)}. (max_k: {max_k}, min_support: {min_support}, min_confidence: {min_confidence}), min_lift: {min_lift}\n")
         yield
 
-        all_rules, label_distribution = yield from CBAHelpers.generate_rules(all_frequent_itemsets, transactions, min_support, min_confidence, min_lift)
+        all_rules, label_distribution = yield from CBAHelpers.generate_rules(all_frequent_itemsets, transactions, min_support, min_confidence, min_lift, m_estimate_weights)
 
         all_rules.sort(key = lambda r : (
             -r["confidence"],     # Accuracy first
@@ -113,11 +114,13 @@ def evaluate_CARs(args):
         if not predictions:
             return None
 
-        accuracy, precision, recall, roc_auc = yield from CommonHelpers.get_metrics(
+        metrics_data = yield from CommonHelpers.get_metrics(
                     predictions, [t["label"] for t in transactions], rules, transactions,
                     None, lambda transaction: transaction["label"],
                     predict_prob_transaction, trainset_label_ratios
                 )
+
+        return metrics_data
 
     except KeyboardInterrupt:
         CommonLogger.logger.log("Received KeyboardInterrupt, exiting.")
@@ -133,7 +136,7 @@ def visualize_CARs(args):
 
     # last rule is the default rule
     for i, rule in enumerate(rules[:-1]):
-        rule_str = f"| [ {TransactionItemset(rule["itemset"]).compact_repr():<140} ] | "
+        rule_str = f"| [ {TransactionItemset(rule["itemset"]).compact_repr():<155} ] | "
         rule_str += f"label: {str(rule['label']):<5} | "
         rule_str += f"confidence: {str(round(rule['confidence'], 4)):<6} | "
         rule_str += f"support: {str(round(rule['support'], 4)):<6} | "

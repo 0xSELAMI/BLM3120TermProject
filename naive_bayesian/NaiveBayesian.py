@@ -106,9 +106,11 @@ def evaluate_naive_bayesian_classifier(args):
         if not predictions:
             return None
 
-        accuracy, precision, recall, roc_auc = yield from CommonHelpers.get_metrics(
+        metrics_data = yield from CommonHelpers.get_metrics(
                 predictions, [t["label"] for t in transactions], probability_table, transactions,
                 None, lambda transaction: transaction["label"], prediction_probability_true, label_counts)
+
+        return metrics_data
 
     except KeyboardInterrupt:
         CommonLogger.logger.log("Received KeyboardInterrupt, exiting.")

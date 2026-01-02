@@ -31,6 +31,8 @@ def process_dataset(args):
     ignore_indices = []
     label_idx_ref = [args.label_idx]
 
+    supported_types = frozenset([str, bool, int, float])
+
     if len(args.ignore_indices) > len(args.field_types):
         CommonLogger.logger.log(f"[ERROR] ignored indices length must be smaller than field types length")
         return None
@@ -49,7 +51,12 @@ def process_dataset(args):
 
     for t in field_types_init:
         try:
-            field_types.append(getattr(builtins, t))
+            ftype = getattr(builtins, t)
+            if ftype not in supported_types:
+                CommonLogger.logger.log(f"[ERROR] unsupported dataset field type: {ftype}, supported types are: {[t.__name__ for t in supported_types]}")
+                return None
+
+            field_types.append(ftype)
         except AttributeError:
             CommonLogger.logger.log(f"[ERROR] invalid field type: {t}")
             return None
@@ -118,7 +125,7 @@ def load_dataset(dataset_filepath, entropy_weights = [1.0, 1.0], preprocess=Fals
     if preprocess and file_ext != '.csv':
         CommonLogger.logger.log("[ERROR] Dataset supplied to preprocess_dataset should be a csv file")
         return None
-    elif not preprocess and file_ext == '.csv':
+    elif not preprocess and file_ext != '.json':
         CommonLogger.logger.log("[ERROR] Dataset supplied to an algorithm should be a json file")
         return None
 
@@ -207,9 +214,6 @@ def create_test_and_train_set(dataset, ratio, field_types):
     # 1186 active, 414 churned in test instances (25.9%) churned
     # 4743 active, 1657 churned in training instances (25.6%) churned
     split = train_test_split(x, y, train_size = 1 - ratio, test_size = ratio, stratify=y)
-
-    # trainset = { "instances": [], "field_names": field_names }
-    # testset = { "instances": [], "field_names": field_names }
 
     trainset = { "instances": [], "field_descriptions": field_descriptions, "label_idx": label_idx }
     testset = { "instances": [], "field_descriptions": field_descriptions, "label_idx": label_idx }

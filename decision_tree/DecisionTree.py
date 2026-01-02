@@ -109,7 +109,7 @@ def evaluate_decision_tree(args):
 
     feature_names = list(testset.feature_types.keys())
 
-    accuracy, precision, recall, roc_auc = yield from CommonHelpers.get_metrics(
+    metrics_data = yield from CommonHelpers.get_metrics(
         predictions,
         [getattr(instance, feature_names[-1]) for instance in testset.instances],
         root, testset,
@@ -117,6 +117,8 @@ def evaluate_decision_tree(args):
         lambda instance: getattr(instance, feature_names[-1]),
         predict_prob_instance
     )
+
+    return metrics_data
 
 def visualize_decision_tree(args):
     import graphviz

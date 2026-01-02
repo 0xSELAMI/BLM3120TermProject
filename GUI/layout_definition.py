@@ -32,7 +32,7 @@ PREPROCESS_DATASET = {
                     "layout": "group",
                     "fields": [
                         {"id": "field_types", "label": "Dataset Field Types", "info":"the sequential data types that instances in the dataset consist of", "value": ','.join((str(default_field_types)[1:-1]).replace("'", "").split(", "))},
-                        {"id": "ignore_indices", "label": "Ignored Field Indices", "info":"Comma seperated field indices to exclude from the resulting datasets (-1 to includes everything)", "value": ','.join((str(default_ignore_indices)[1:-1]).split(", "))},
+                        {"id": "ignore_indices", "label": "Ignored Field Indices", "info":"Comma seperated field indices to exclude from the resulting datasets (-1 to include everything)", "value": ','.join((str(default_ignore_indices)[1:-1]).split(", "))},
                         {"id": "label_idx", "label": "Label Index", "info":"Field idx of the target class", "type": "number", "value": default_label_idx},
                     ]
                 }
@@ -103,7 +103,7 @@ DECISION_TREE = {
             "title": "Visualize",
             "handler": "decision_tree.visualize",
             "hide_output_group": True,
-            "outputs_to": "viz_out",
+            "outputs_to": ["viz_out"],
             "btn_on_top": True,
             "sections": [
                 {
@@ -157,6 +157,7 @@ CBA = {
                                         {"id": "min_confidence", "label": "Minimum Confidence", "type":"number", "value":default_min_confidence, "info":"Minimum confidence for the CARs"},
                                         {"id": "min_lift", "label": "Minimum Lift", "type":"number", "value":default_min_lift, "info":"Minimum lift for the CARs"},
                                         {"id": "error_weights", "label": "Error Weights", "value": ','.join((str(default_error_weights)[1:-1]).split(", ")), "info":"The weights to use for penalizing rules that incorrectly cover instances while building CAR classifier"},
+                                        {"id": "m_estimate_weights", "label": "M-Estimate Weights", "value": ','.join((str(default_m_estimate_weights)[1:-1]).split(", ")), "info":"The weights to decide how more likely it should be that a rule's prediction is correct than its label's random guess baseline"},
                                     ]
                                 }
                             ]
@@ -182,7 +183,7 @@ CBA = {
             "title": "Visualize",
             "handler": "CBA.visualize",
             "hide_output_group": True,
-            "outputs_to": "viz_out",
+            "outputs_to": ["viz_out"],
             "btn_on_top": True,
             "sections": [
                 {
@@ -251,7 +252,7 @@ NAIVE_BAYESIAN = {
             "title": "Visualize",
             "handler": "naive_bayesian.visualize",
             "hide_output_group": True,
-            "outputs_to": "viz_out",
+            "outputs_to": ["viz_out"],
             "btn_on_top": True,
             "sections": [
                 {
@@ -266,4 +267,66 @@ NAIVE_BAYESIAN = {
     ]
 }
 
-layout_definition = [PREPROCESS_DATASET, DECISION_TREE, CBA, NAIVE_BAYESIAN]
+PLOT_PERFORMANCES = {
+    "title": "Plot Performances",
+    "tab_id": "plot_performances",
+    "handler": "plot_performances",
+    #"hide_output_group": True,
+    "forwarder": "forward_plot",
+    "outputs_to": ["common_log_out", "plot_accuracy", "plot_precision", "plot_recall", "plot_f1", "plot_roc_auc", "plot_roc_curve"],
+    "btn_on_top": True,
+    "sections": [
+        {
+            "layout": "column",
+            "sections": [
+                {
+                    "layout": "row",
+                    "sections": [
+                        {
+                            "layout": "group",
+                            "fields": [
+                                {"id": "testset_infile", "label": "Testset Path", "type": "path", "value": default_testset_path},
+                                {"id": "pickle_path_decision_tree", "label": "Decision Tree Pickle Path", "type": "path", "value": default_decision_tree_pickle_path},
+                            ]
+                        },
+                        {
+                            "layout": "group",
+                            "fields": [
+                                {"id": "pickle_path_CBA", "label": "CBA Pickle Path", "type": "path", "value": default_CBA_pickle_path},
+                                {"id": "pickle_path_naive_bayesian", "label": "Naive Bayesian Pickle Path", "type": "path", "value": default_naive_bayesian_pickle_path},
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "layout": "column",
+                    "sections": [
+                        {
+                            "layout": "row",
+                            "fields": [
+                                {"id": "plot_accuracy", "label": "Accuracy", "type": "plot", "not_an_input": True},
+                                {"id": "plot_precision", "label": "Precision", "type": "plot", "not_an_input": True},
+                                {"id": "plot_recall", "label": "Recall", "type": "plot", "not_an_input": True},
+                            ]
+                        },
+                        {
+                            "layout": "row",
+                            "fields": [
+                                {"id": "plot_f1", "label": "F1-Score", "type": "plot", "not_an_input": True},
+                                {"id": "plot_roc_auc", "label": "ROC-AUC Score", "type": "plot", "not_an_input": True},
+                            ]
+                        },
+                        {
+                            "layout": "row",
+                            "fields": [
+                                {"id": "plot_roc_curve", "label": "ROC (Receiver-Operating Characteristic) Curve", "type": "plot", "not_an_input": True},
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
+
+layout_definition = [PREPROCESS_DATASET, DECISION_TREE, CBA, NAIVE_BAYESIAN, PLOT_PERFORMANCES]

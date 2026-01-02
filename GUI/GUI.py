@@ -13,14 +13,19 @@ import common.Logger as CommonLogger
 class ForwardArgs:
     def __init__(self, user, args):
         self.invalid = False
+        self.names = []
 
         for name in args:
+            self.names.append(name)
             if args[name] is None or args[name] == '':
                 CommonLogger.logger.log(f"[ERROR] {user}(): {name} invalid")
                 self.invalid = True
                 break
 
             setattr(self, name, args[name])
+
+    def __repr__(self):
+        return str({name: getattr(self, name) for name in self.names})
 
 class GUI:
     def __init__(self, handlers):
@@ -49,6 +54,8 @@ class GUI:
                     autoscroll=True,
                     scale=9
                 )
+
+                self.elems["common_log_out"] = self.log_out
 
                 self.log_out_clear_btn = gr.Button("Clear", variant="secondary", scale=1)
 
@@ -95,6 +102,38 @@ class GUI:
         else:
             yield CommonLogger.logger.read_all()
 
+    def forward_plot(self, handler_path, param_names, *values):
+        CommonLogger.logger.clear()
+        # build args dictionary
+        args_dict = dict(zip(param_names, values))
+
+        args = ForwardArgs("plot_performances", args_dict)
+
+        result = [None] * 7
+
+        if not args.invalid:
+            try:
+                handler = self.handlers
+
+                for key in handler_path.split('.'):
+                    handler = handler[key]
+
+                result = handler(args)
+
+                logger_output = CommonLogger.logger.read_all()
+
+                if type(result) != list:
+                    result = [logger_output if logger_output else None] + [result]
+                else:
+                    result = [logger_output] + result
+
+            except Exception as e:
+                return [f"{e}"] + [None] * 6
+        else:
+            result = [CommonLogger.logger.read_all()] + [None] * 6
+            
+        return result
+
     def render_layout(self, layout, hide_output_group_states):
         with gr.Tab(layout["title"]) as cur_tab:
             
@@ -121,8 +160,7 @@ class GUI:
                         outputs=[self.log_out, self.log_out_clear_btn]
                     )
                 else:
-
-                # hide log_out and clear btn if "hide_output_group" in layout def
+                    # hide log_out and clear btn if "hide_output_group" in layout def
                     cur_tab.select(
                         fn=lambda: (hide_val, *([gr.update(visible = not hide_val)] * 2)),
                         outputs=[hide_output_group_states[layout["handler"].split('.')[0]], self.log_out, self.log_out_clear_btn]
@@ -131,7 +169,14 @@ class GUI:
                 all_inputs = []
                 all_keys = []
 
-                target_id = layout.get("outputs_to")
+                forwarder = layout.get("forwarder", "generic")
+
+                if forwarder == "forward_plot":
+                    forwarder = self.forward_plot
+                else:
+                    forwarder = self.generic_forward
+
+                target_ids = layout.get("outputs_to")
 
                 clear_btn = None
                 btn = None
@@ -139,7 +184,7 @@ class GUI:
                 if layout.get("btn_on_top", False):
                     btn = gr.Button(f"{layout['title']}", variant="primary")
 
-                    if target_id:
+                    if target_ids:
                         clear_btn = gr.Button(f"Clear", variant="secondary")
 
                 for section in layout.get("sections", []):
@@ -148,23 +193,28 @@ class GUI:
                 if not btn:
                     btn = gr.Button(f"{layout['title']}", variant="primary")
 
-                    if target_id and not clr_btn:
+                    if target_ids and not clr_btn:
                         clear_btn = gr.Button(f"Clear", variant="secondary")
 
-                output_target_elem = self.log_out
+                output_target_elems = []
 
-                if target_id:
+                if target_ids:
+                    if "common_log_out" in target_ids:
+                        output_target_elems.append(self.elems["common_log_out"])
+
                     for elem_id in self.elems:
-                        if layout["handler"] + target_id == elem_id:
-                            output_target_elem = self.elems[elem_id]
-                            break
+                        for target_id in target_ids:
+                            if layout["handler"] + target_id == elem_id:
+                                output_target_elems.append(self.elems[elem_id])
 
-                    clear_btn.click(lambda: '', outputs=[output_target_elem])
+                    clear_btn.click(lambda: [None] * len(output_target_elems) if len(output_target_elems) > 1 else None, outputs=output_target_elems)
+                else:
+                    output_target_elems = [self.log_out]
 
                 btn.click(
-                    fn=self.generic_forward,
+                    fn=forwarder,
                     inputs=[gr.State(layout["handler"]), gr.State(all_keys)] + all_inputs,
-                    outputs=[output_target_elem]
+                    outputs=output_target_elems
                 )
 
     # create sections recursively
@@ -222,6 +272,9 @@ class GUI:
         if ftype == "html":
             js_on_load  = field.get("js_on_load", "")
             return gr.HTML(label=label, value=value, interactive=interactive, js_on_load=js_on_load)
+
+        if ftype == "plot":
+            return gr.Plot(label=label)
 
         # default to Textbox
         return gr.Textbox(label=label, value=value, info=info)

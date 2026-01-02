@@ -17,15 +17,17 @@ from CBA.CBA import generate_CARs, evaluate_CARs, visualize_CARs
 
 from naive_bayesian.NaiveBayesian import build_naive_bayesian_classifier, evaluate_naive_bayesian_classifier, visualize_naive_bayesian_classifier
 
-from defaults import *
+from GUI.Plotter import Plotter
 
 import common.Logger as CommonLogger
+
+from defaults import *
 
 def create_process_dataset_argparser(parsers, subparsers):
     main_desc = "Create testset and trainset from supplied dataset"
 
     parsers["process_dataset"] = subparsers.add_parser("process_dataset", description=main_desc, help=main_desc)
-    parsers["process_dataset"].add_argument("--dataset", "-d", metavar='PATH_TO_DATASET', type=str, required=True)
+    parsers["process_dataset"].add_argument("--dataset", "-d", metavar='PATH_TO_DATASET', help=f"default: {default_dataset_path}", default=default_dataset_path, type=str)
     parsers["process_dataset"].add_argument("--ratio", "-r", metavar='RATIO', help=f"ratio of the size of the testset to the size of whole dataset (default: {default_testset_trainset_ratio})", default=default_testset_trainset_ratio, type=float)
     parsers["process_dataset"].add_argument("--trainset-outfile", metavar='TRAINSET_OUTPATH', help=f"default: {default_trainset_path}", default=default_trainset_path, type=str)
     parsers["process_dataset"].add_argument("--testset-outfile", metavar='TESTSET_OUTPATH', help=f"default: {default_testset_path}", default=default_testset_path, type=str)
@@ -81,6 +83,7 @@ def create_CBA_argparser(parsers, subparsers, parent_parsers):
     parsers["CBA"]["gen"].add_argument("--min-confidence", metavar='MIN_CONF', help=f"Minimum confidence for the CARs (default: {default_min_confidence})", default=default_min_confidence, type=float)
     parsers["CBA"]["gen"].add_argument("--min-lift", metavar='MIN_LIFT', help=f"Minimum lift for the CARs (default: {default_min_lift})", default=default_min_lift, type=float)
     parsers["CBA"]["gen"].add_argument("--error-weights", nargs=2, metavar=('WEIGHT_FALSE_POSITIVES', 'WEIGHT_FALSE_NEGATIVES'), help=f"The weights to use for penalizing rules that incorrectly cover instances while building CAR classifier (default: {default_error_weights})", default=default_error_weights, type=float)
+    parsers["CBA"]["gen"].add_argument("--m-estimate-weights", nargs=2, metavar=('WEIGHT_M_ESTIMATE_TRUE', 'WEIGHT_M_ESTIMATE_FALSE'), help=f"The weights to decide how more likely it should be that a rule's prediction is correct than its label's random guess baseline (default: {default_m_estimate_weights})", default=default_m_estimate_weights, type=float)
 
     parsers["CBA"]["eval"] = CBA_subparsers.add_parser("evaluate", description=eval_desc, help=eval_desc, parents=[parent_parsers["evaluator"], pickle_parser])
 
@@ -137,17 +140,25 @@ def main():
     args = parser.parse_args()
 
     # generator drainer
-    def run_task(fnc):
-        ret = fnc(args)
+    def run_task(fnc, _args):
+        ret = fnc(_args)
         if inspect.isgenerator(ret):
-            for _ in fnc(args):
+            for _ in ret:
                 pass
+        else:
+            return ret
 
-    # instantiate shared logger
+    # instantiate shared logger, argument determines gui vs cli mode
     CommonLogger.logger = CommonLogger.Logger(True if args.command == "GUI" else False)
 
     if args.command == "GUI":
-        from GUI.gui import GUI
+        from GUI.GUI import GUI
+
+        plotter = run_task(Plotter,
+                           {"decision_tree": evaluate_decision_tree, 
+                           "CBA": evaluate_CARs,
+                           "naive_bayesian": evaluate_naive_bayesian_classifier
+                           })
 
         handlers = {}
         handlers["process_dataset"] = process_dataset
@@ -167,40 +178,41 @@ def main():
         handlers["naive_bayesian"]["evaluate"] = evaluate_naive_bayesian_classifier
         handlers["naive_bayesian"]["visualize"] = visualize_naive_bayesian_classifier
 
+        handlers["plot_performances"] = plotter.plot_performances
+
         project_gui = GUI(handlers)
         project_gui.launch()
 
     elif args.command == "process_dataset":
-        run_task(process_dataset)
+        run_task(process_dataset, args)
 
     elif args.command == "decision_tree":
         if args.subcommand_decision_tree == "build":
-            run_task(build_decision_tree)
+            run_task(build_decision_tree, args)
         elif args.subcommand_decision_tree == "evaluate":
-            run_task(evaluate_decision_tree)
+            run_task(evaluate_decision_tree, args)
         else:
             parsers["decision_tree"]["main_parser"].print_help()
 
     elif args.command == "CBA":
         if args.subcommand_CBA == "generate":
-            run_task(generate_CARs)
+            run_task(generate_CARs, args)
         elif args.subcommand_CBA == "evaluate":
-            run_task(evaluate_CARs)
+            run_task(evaluate_CARs, args)
         else:
             parsers["CBA"]["main_parser"].print_help()
 
     elif args.command == "naive_bayesian":
         if args.subcommand_NB == "build":
-            run_task(build_naive_bayesian_classifier)
+            run_task(build_naive_bayesian_classifier, args)
         elif args.subcommand_NB == "evaluate":
-            run_task(evaluate_naive_bayesian_classifier)
+            run_task(evaluate_naive_bayesian_classifier, args)
         else:
             parsers["naive_bayesian"]["main_parser"].print_help()
     else:
         parser.print_help()
 
 if __name__ == "__main__":
-    # TODO a tab for accuracy precision recall f1 and roc-auc comparison plots(?)
     # TODO find 2 other classification datasets to try (?)
     # TODO more comments
     # TODO write report

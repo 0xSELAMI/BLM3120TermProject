@@ -121,7 +121,7 @@ def apriori(transactions, min_support, max_k):
 
     return F
 
-def generate_rules(all_frequent_itemsets, transactions, min_support, min_confidence, min_lift):
+def generate_rules(all_frequent_itemsets, transactions, min_support, min_confidence, min_lift, m_estimate_weights):
     rules = []
 
     label_supports = {
@@ -134,11 +134,14 @@ def generate_rules(all_frequent_itemsets, transactions, min_support, min_confide
 
     for i, Fk in enumerate(all_frequent_itemsets):
         sorted_Fk = sorted(Fk.items(), key=lambda x: str(x[0]))
-        CommonLogger.logger.update_last(infostr + f" processing {i+1}-item frequent itemsets with {len(Fk)} itemsets")
+        CommonLogger.logger.update_last(infostr + f" processing {i+1}-item frequent itemsets, count: {len(Fk)} itemsets")
         yield
 
         # for every itemset in the current frequent itemset
-        for frequent_itemset, count_X in sorted_Fk:
+        for k, (frequent_itemset, count_X) in enumerate(sorted_Fk):
+            CommonLogger.logger.log(f"Iterating through frequent itemsets... {k+1}/{len(Fk)}")
+            yield
+            CommonLogger.logger.backtrack(1)
             counts_X_y = {True: 0, False: 0}
 
             # keep track of counts of transactions with possible labels
@@ -181,11 +184,14 @@ def generate_rules(all_frequent_itemsets, transactions, min_support, min_confide
                 if current_rule["lift"] <= min_lift:
                     continue
 
-                # rule must be 50% more likely than a random guess for a true label.
-                if (
-                    current_rule["m_estimate"] < (label_supports[label] * 2) and
-                    current_rule["label"] == True
-                ):
+                will_skip = False
+                for j, label in enumerate(label_supports):
+                    # the rule's m-estimate must exceed the random guess baseline (label support)
+                    # multiplied by the label-specific weight.
+                    if (current_rule["m_estimate"] < (label_supports[label] * m_estimate_weights[j])):
+                        will_skip = True
+
+                if will_skip:
                     continue
 
                 rules.append(current_rule)

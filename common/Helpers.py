@@ -82,7 +82,7 @@ def get_basic_metrics(labels, predictions):
     yield
 
     # maybe return confusion matrix too, if need be
-    return (accuracy, precision, recall)
+    return (accuracy, precision, recall, f1_score)
 
 def get_label_values_and_probs(learning_output, dataset, dataset_property_accessor, data_label_accessor, probability_function, *fargs):
     y_labels = []
@@ -128,7 +128,7 @@ def calc_roc_auc(y_label_values, y_probs):
     return auc
 
 def get_metrics(predictions, labels, learning_output, dataset, dataset_property_accessor, data_label_accessor, probability_function, *fargs):
-    accuracy, precision, recall = yield from get_basic_metrics(labels, predictions)
+    accuracy, precision, recall, f1_score = yield from get_basic_metrics(labels, predictions)
 
     values_and_probs =  get_label_values_and_probs(
                             learning_output, dataset,
@@ -137,10 +137,12 @@ def get_metrics(predictions, labels, learning_output, dataset, dataset_property_
                         )
 
     if not values_and_probs:
-        return [None] * 4
+        return [None] * 5
 
     roc_auc = calc_roc_auc(*values_and_probs)
     CommonLogger.logger.log(f"ROC-AUC: {round(roc_auc, 4)}\n")
     yield
 
-    return accuracy, precision, recall, roc_auc
+    y_labels, y_probs = values_and_probs
+
+    return accuracy, precision, recall, f1_score, roc_auc, y_probs, y_labels
