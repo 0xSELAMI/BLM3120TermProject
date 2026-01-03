@@ -49,11 +49,9 @@ What follows is the usages for each command and parameter descriptions. Running 
 
 #### main
 ```
-usage: ./main.py [-h]
-                 {GUI,process_dataset,decision_tree,CBA,naive_bayesian} ...
+usage: ./main.py [-h] {GUI,process_dataset,decision_tree,CBA,naive_bayesian} ...
 
-A python script to oversee and fulfill the functionalities the project
-proposal document specifies
+A python script to oversee and fulfill the functionalities the project proposal document specifies
 
 options:
   -h, --help            show this help message and exit
@@ -63,10 +61,8 @@ commands:
     GUI                 Starts the gradio GUI
     process_dataset     Create testset and trainset from supplied dataset
     decision_tree       Build or evaluate a decision tree
-    CBA                 Generate a CAR (Class Association Rule) classifier or
-                        evaluate a CAR classifier
-    naive_bayesian      Build a naive bayesian classifier probability table or
-                        evaluate one
+    CBA                 Generate a CAR (Class Association Rule) classifier or evaluate a CAR classifier
+    naive_bayesian      Build a naive bayesian classifier or evaluate a naive bayesian classifier
 
 StudentID: [REDACTED]
 ```

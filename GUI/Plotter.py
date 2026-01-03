@@ -1,7 +1,6 @@
 from sklearn.metrics import roc_curve, auc
 import matplotlib.pyplot as plt
 import numpy as np
-import copy
 
 import common.Logger as CommonLogger
 from GUI.GUI import ForwardArgs

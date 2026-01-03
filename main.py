@@ -88,7 +88,7 @@ def create_CBA_argparser(parsers, subparsers, parent_parsers):
     parsers["CBA"]["eval"] = CBA_subparsers.add_parser("evaluate", description=eval_desc, help=eval_desc, parents=[parent_parsers["evaluator"], pickle_parser])
 
 def create_naive_bayesian_argparser(parsers, subparsers, parent_parsers):
-    main_desc  = "Build a naive bayesian classifier probability table or evaluate one"
+    main_desc  = "Build a naive bayesian classifier or evaluate a naive bayesian classifier"
     build_desc = "Build a naive bayesian classifier probability table using the trainset and save into a pickle file"
     eval_desc  = "Evaluate a naive bayesian classifier probability table using the supplied testset"
 
