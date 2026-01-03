@@ -85,7 +85,7 @@ options:
   --testset-outfile TESTSET_OUTPATH
                         default: dataset/spotify_churn_dataset/default_testset.json
   --field-types FIELD_TYPES [FIELD_TYPES ...]
-                        data types an instances of the dataset consist of, given sequentially and space seperated. default: ['int', 'str', 'int', 'str', 'str', 'int', 'int', 'float', 'str', 'int', 'bool', 'bool']
+                        the data types instances of the dataset consist of, given sequentially and space seperated. default: ['int', 'str', 'int', 'str', 'str', 'int', 'int', 'float', 'str', 'int', 'bool', 'bool']
   --ignore-indices IGNORE_INDICES [IGNORE_INDICES ...]
                         field indices to exclude from resulting datasets, space seperated. -1 includes everything. default: [0]
   --label-idx LABEL_IDX
