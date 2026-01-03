@@ -16,8 +16,12 @@ def generate_CARs(args):
         return None
 
     try:
-        threshold_map         = yield from Discretizer.best_thresholds_for_features(trainset, args.max_split_count, args.min_bin_frac, args.delta_cost)
-        transactions          = apply_thresholds(trainset, threshold_map)
+        threshold_map = yield from Discretizer.best_thresholds_for_features(trainset, args.max_split_count, args.min_bin_frac, args.delta_cost)
+
+        if not threshold_map:
+            return
+
+        transactions = apply_thresholds(trainset, threshold_map)
         
         max_k              = args.max_k
         min_support        = args.min_support
@@ -30,7 +34,7 @@ def generate_CARs(args):
         yield
 
         # apriori returns all Fk where k in range (0, max_k)
-        all_frequent_itemsets = yield from CBAHelpers.apriori(transactions, min_support, max_k)
+        all_frequent_itemsets, vertical_index = yield from CBAHelpers.apriori(transactions, min_support, max_k)
 
         CommonLogger.logger.backtrack(2)
         CommonLogger.logger.log(f"Collected frequent itemsets up to size {len(all_frequent_itemsets)}. (max_k: {max_k}, min_support: {min_support}, min_confidence: {min_confidence}), min_lift: {min_lift}\n")
@@ -47,10 +51,10 @@ def generate_CARs(args):
             str(r["itemset"])     # Deterministic tie-break
         ))
 
-        rules, default_rule = CBAHelpers.build_classifier(all_rules, transactions, error_weights)
+        CommonLogger.logger.update_last(f"Building the classifier... ")
+        rules, default_rule = yield from CBAHelpers.build_classifier(all_rules, transactions, vertical_index, error_weights)
         rules.append( default_rule )
-
-        CommonLogger.logger.backtrack(1)
+        CommonLogger.logger.backtrack(2)
         CommonLogger.logger.log(f"Generated {len(all_rules)} rules. Down to {len(rules)} after building the classifier.\n")
         yield
 
@@ -104,6 +108,9 @@ def evaluate_CARs(args):
         threshold_map         = pickled_data["threshold_map"]
         trainset_label_ratios = pickled_data["trainset_label_ratios"]
 
+        if not threshold_map:
+            return
+
         transactions   = apply_thresholds(testset, threshold_map)
 
         predictions =   CommonHelpers.predict_dataset(
@@ -119,6 +126,7 @@ def evaluate_CARs(args):
                     None, lambda transaction: transaction["label"],
                     predict_prob_transaction, trainset_label_ratios
                 )
+        CommonLogger.logger.log("")
 
         return metrics_data
 

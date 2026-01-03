@@ -18,79 +18,149 @@ def get_F1(transactions, min_support):
     sorted_items = sorted(item_counts.items(), key=lambda x: str(x[0]))
     return {TransactionItemset([item]): count for item, count in sorted_items if (count / len(transactions)) >= min_support}
 
-def generate_candidates(F_prev, k):
+def generate_candidates(F_prev_keys, k):
     candidates = set()
-    itemsets = sorted(list(F_prev.keys()), key=lambda x: str(x))
+
+    # Convert itemsets to sorted lists for prefix comparison
+    # items inside TransactionItemset are already unique, sort them for a stable prefix
+    list_of_itemsets = []
+
+    for f in F_prev_keys:
+        list_of_itemsets.append(sorted(list(f.items), key=lambda x: str(x)))
+
+    list_of_itemsets.sort(key=lambda x: [str(item) for item in x])
 
     infostr = "Iterating through previous frequent itemsets... "
-    setcount = len(itemsets)
 
-    for i in range(setcount):
-        itemset_i = itemsets[i]
+    n = len(list_of_itemsets)
 
-        CommonLogger.logger.log(infostr + f"{i}/{setcount}")
-        yield
+    for i in range(n):
 
-        for j in range(i + 1, setcount):
-            candidate = itemset_i | itemsets[j]
+        if i % 500 == 0:
+            CommonLogger.logger.log(infostr + f"{i}/{n}")
+            yield
+            CommonLogger.logger.backtrack(1)
 
-            if len(candidate) == k:
-                candidates.add(candidate)
+        for j in range(i + 1, n):
 
-        CommonLogger.logger.backtrack(1)
+            # only join if the first k-2 items are the same
+            # if the prefix doesn't match, stop the inner loop
+            if list_of_itemsets[i][:k-2] == list_of_itemsets[j][:k-2]:
+                # Join the two sets
+                new_item = list_of_itemsets[j][k-2]
+                candidate = TransactionItemset(list_of_itemsets[i])
+                candidate.add(new_item)
 
-    return TransactionItemset(candidates)
+                if len(candidate) == k:
+                    candidates.add(candidate)
+            else:
+                # prefixes will never match again for this i
+                # because itemsets are sorted
+                break
 
-def prune_candidates(candidates, F_prev):
+    return candidates
+
+def prune_candidates(candidates, F_prev_keys):
+    # create a lookup of frozensets for O(1) membership testing
+    # F_prev.keys() contains TransactionItemsets; we extract their internal item sets
+    lookup_set = {frozenset(f.items) for f in F_prev_keys}
     pruned = set()
 
-    candidates = list(candidates)
-    
+    candidate_list = list(candidates)
+    n = len(candidate_list)
+
     infostr = "Iterating through candidates... "
-    candidate_count = len(candidates)
 
-    for i, candidate in enumerate(candidates):
-        CommonLogger.logger.log(infostr + f"{i}/{candidate_count}")
-        yield
+    for i, candidate in enumerate(candidate_list):
+        items = list(candidate.items)
 
-        if all( (candidate - {item}) in set(F_prev.keys()) for item in candidate ):
+        is_valid = True
+
+        # every subset of size k-1 must be frequent
+        for j in range(len(items)):
+            # generates all possible subsets with size k-1 while the loop progresses
+            subset = frozenset(items[:j] + items[j+1:])
+            if subset not in lookup_set:
+                is_valid = False
+                break
+
+        if is_valid:
             pruned.add(candidate)
 
-        CommonLogger.logger.backtrack(1)
+        if i % 100 == 0:
+            CommonLogger.logger.log(infostr + f"{i}/{n}")
+            yield
+            CommonLogger.logger.backtrack(1)
 
-    return TransactionItemset(pruned)
+    return pruned
 
-# how many a candidate itemse is found in the transactions list
-def calc_candidate_counts(candidates, transactions, min_support):
-    counts = {candidate : 0 for candidate in candidates}
+# counts of candidate itemsets in the transactions list
+def calc_candidate_counts(candidates, vertical_index, pos_indices, transaction_count, min_support):
+    results = {}
 
-    infostr = "Iterating through transactions... "
+    infostr = "Iterating through candidates... "
 
-    candidates = list(candidates.items)
-    transaction_count = len(transactions)
+    n = len(candidates)
 
-    for i, t in enumerate(transactions):
-        t_itemset = t["itemset"]
+    for i, candidate in enumerate(candidates):
+        if i % 500 == 0:
+            CommonLogger.logger.log(infostr + f"{i}/{n}")
+            yield
+            CommonLogger.logger.backtrack(1)
 
-        CommonLogger.logger.log(infostr + f"{i}/{transaction_count}")
-        yield
+        item_list = list(candidate.items)
+        if not item_list: continue
 
-        for candidate in candidates:
-            if len(t_itemset) < len(candidate):
-                continue
+        # start with the first item's row set
+        running_rows = vertical_index.get(item_list[0], set())
 
-            if candidate.issubset(t_itemset):
-                counts[candidate] += 1
+        # intersecting with subsequent items returns the set that 
+        # contains all the transaction ID's that contain this itemset
+        # because its a vertical index
+        for j in range(1, len(item_list)):
+            running_rows = running_rows & vertical_index.get(item_list[j], set())
+            if not running_rows: break
 
-        CommonLogger.logger.backtrack(1)
+        count = len(running_rows)
 
-    return {candidate: count for candidate, count in counts.items() if (count / len(transactions) >= min_support)}
+        if (count / transaction_count) >= min_support:
+            # pos indices contain all the transactions IDs that have a 'true' label
+            pos_count = len(running_rows & pos_indices)
+
+            results[candidate] = {
+                "total": count,
+                "pos": pos_count,
+                "neg": count - pos_count
+            }
+
+    return results
 
 def apriori(transactions, min_support, max_k):
+    vertical_index = {}
+
+    # instead of having to iterate through transactions every time
+    # build a TID list instead to instantly know how many transactions
+    # contain a given item
+    for i, t in enumerate(transactions):
+        for item in t["itemset"].items:
+            if item not in vertical_index:
+                vertical_index[item] = set()
+            vertical_index[item].add(i)
+
+    # pre-calculate positive indices for the rule-counting optimization
+    pos_indices = {i for i, t in enumerate(transactions) if t["label"]}
+
     CommonLogger.logger.log("Collecting frequent itemsets with size 1")
     yield
 
     F = [get_F1(transactions, min_support)]
+
+    # F[0] currently just has counts. reformat so generate_rules can use it later.
+    for itemset in F[0]:
+        items = list(itemset.items)
+        rows = vertical_index.get(items[0], set())
+        pos_count = len(rows & pos_indices)
+        F[0][itemset] = {"total": len(rows), "pos": pos_count, "neg": len(rows) - pos_count}
 
     k = 2
 
@@ -99,27 +169,21 @@ def apriori(transactions, min_support, max_k):
     while F[k - 2] and k <= max_k:
         CommonLogger.logger.update_last(infostr + f" {k} : generating candidates")
         yield
-
-        candidates_k = yield from generate_candidates(F[k - 2], k)
+        candidates_k = yield from generate_candidates(F[k - 2].keys(), k)
 
         CommonLogger.logger.update_last(infostr + f" {k} : pruning candidates")
         yield
-
-        candidates_k = yield from prune_candidates(candidates_k, F[k - 2])
+        candidates_k = yield from prune_candidates(candidates_k, F[k - 2].keys())
 
         CommonLogger.logger.update_last(infostr + f" {k} : counting candidate occurances in transactions")
         yield
-        Fk = yield from calc_candidate_counts(candidates_k, transactions, min_support)
+        Fk = yield from calc_candidate_counts(candidates_k, vertical_index, pos_indices, len(transactions), min_support)
 
-        if not Fk:
-            break
-        
-        k += 1
+        if not Fk: break
         F.append(Fk)
+        k += 1
 
-    yield
-
-    return F
+    return F, vertical_index
 
 def generate_rules(all_frequent_itemsets, transactions, min_support, min_confidence, min_lift, m_estimate_weights):
     rules = []
@@ -138,20 +202,15 @@ def generate_rules(all_frequent_itemsets, transactions, min_support, min_confide
         yield
 
         # for every itemset in the current frequent itemset
-        for k, (frequent_itemset, count_X) in enumerate(sorted_Fk):
-            CommonLogger.logger.log(f"Iterating through frequent itemsets... {k+1}/{len(Fk)}")
-            yield
-            CommonLogger.logger.backtrack(1)
-            counts_X_y = {True: 0, False: 0}
+        for k, (frequent_itemset, counts) in enumerate(sorted_Fk):
+            if k % 500 == 0:
+                CommonLogger.logger.log(f"Iterating through frequent itemsets... {k+1}/{len(Fk)}")
+                yield
+                CommonLogger.logger.backtrack(1)
 
-            # keep track of counts of transactions with possible labels
-            # if a transaction that contains current itemset
-            # increase the count of that label
-            for t in transactions:
-                if frequent_itemset.issubset(t["itemset"]):
-                    # increase the count of (X -> y) where X is the itemset in Fk
-                    # and y is a label
-                    counts_X_y[t["label"]] += 1
+            # get the counts from supplied dict to save time
+            count_X = counts["total"]
+            counts_X_y = {True: counts["pos"], False: counts["neg"]}
 
             max_conf = max(counts_X_y[True], counts_X_y[False]) / count_X
 
@@ -198,75 +257,82 @@ def generate_rules(all_frequent_itemsets, transactions, min_support, min_confide
 
     return rules, label_supports
 
-def build_classifier(rules, transactions, error_weights):
-    def rule_covers(rule, idx):
-        return rule["itemset"].issubset(transactions[idx]["itemset"])
+# M1 algorithm for building the classifier.
+def build_classifier(rules, transactions, vertical_index, error_weights):
+    N = len(transactions)
 
-    def rule_is_correct(rule, idx):
-        return rule_covers(rule, idx) and (transactions[idx]["label"] == rule["label"])
+    # track which transactions haven't been covered yet
+    remaining_idx = set(range(N))
 
-    def rule_is_incorrect(rule, idx):
-        return rule_covers(rule, idx) and (transactions[idx]["label"] != rule["label"])
+    # maintain running counts of labels in the remaining set
+    rem_true = sum(1 for t in transactions if t["label"])
+    rem_false = N - rem_true
 
-    def count_labels_in_remainder(remaining_idx, transactions):
-        count_true = sum(1 for i in remaining_idx if transactions[i]["label"])
-        count_false = len(remaining_idx) - count_true
-
-        return (count_true, count_false)
-
-    def count_labels_in_transactions(transactions):
-        count_true = sum(1 for t in transactions if t["label"])
-        count_false = len(transactions) - count_true
-
-        return (count_true, count_false)
-
-    remaining_idx = set(range(len(transactions)))
     rule_list         = []
     total_errors      = []
     cumulative_errors = 0
 
-    count_true_t, count_false_t = count_labels_in_transactions(transactions)
+    infostr = "Iterating through rules... "
+    CommonLogger.logger.log(infostr)
 
-    count_true = count_false = None
+    # data covering
+    for idx, rule in enumerate(rules):
+        if idx % 100 == 0:
+            CommonLogger.logger.update_last(infostr + f"{idx}/{len(rules)}")
+            yield
 
-    for rule in rules:
-        default_errors = None
+        #  use vertical index to find transactions containing the itemset
+        items = list(rule["itemset"].items)
+        if not items:
+            covered_tids = set(range(N))
+        else:
+            # intersect TID-sets of all items in the rule
+            covered_tids = vertical_index.get(items[0], set()).copy()
+            for i in range(1, len(items)):
+                covered_tids &= vertical_index.get(items[i], set())
+                if not covered_tids: break
 
-        covered = [i for i in remaining_idx if rule_covers(rule, i)]
+        # filter by transactions that are still available
+        actually_covered = covered_tids & remaining_idx
 
-        if not covered:
+        if not actually_covered:
             continue
 
-        correct = [i for i in remaining_idx if rule_is_correct(rule, i)]
-        wrong   = [i for i in remaining_idx if rule_is_incorrect(rule, i)]
-        
-        # if the rule is more wrong than right then skip
-        if not correct or len(wrong) >= len(correct):
+        # determine how many transactions are correctly/incorrectly classified by the rule
+        # only scan the 'actually_covered' subset
+        correct_tids = {i for i in actually_covered if transactions[i]["label"] == rule["label"]}
+        wrong_tids = actually_covered - correct_tids
+
+        len_correct = len(correct_tids)
+        len_wrong = len(wrong_tids)
+
+        # skip rules that don't help (more wrong than right or not right at all)
+        if not len_correct or len_wrong >= len_correct: 
             continue
-        
+
+        # accept the rule
         rule_list.append(rule)
 
-        # cost of ignoring the incorrectly covered instances (false neg/pos)
-        if rule["label"]:
-            cumulative_errors += len(wrong) * error_weights[0]
-        else:
-            cumulative_errors += len(wrong) * error_weights[1]
+        # calculate cost of errors introduced by this rule
+        # (transactions that are covered incorrectly)
+        weight = error_weights[0] if rule["label"] else error_weights[1]
+        cumulative_errors += len_wrong * weight
 
-        for i in covered:
-            remaining_idx.remove(i)
-
-        if remaining_idx:
-            count_true, count_false = count_labels_in_remainder(remaining_idx, transactions)
-
-            # cost of stopping construction and creating a default label
-            if count_true >= count_false:
-                # false instances we'd get wrong with a default label
-                default_errors = count_false * error_weights[0]
+        # remove covered instances and update running label totals
+        for tid in actually_covered:
+            remaining_idx.remove(tid)
+            if transactions[tid]["label"]:
+                rem_true -= 1
             else:
-                # true instances we'd get wrong with a default label
-                default_errors = count_true * error_weights[1]
+                rem_false -= 1
+
+        # calculate cost of stopping here (making everything else a default label)
+        if rem_true >= rem_false:
+            # default true, errors are the remaining False instances
+            default_errors = rem_false * error_weights[0]
         else:
-            default_errors = 0
+            # default false, errors are the remaining True instances
+            default_errors = rem_true * error_weights[1]
 
         total_errors.append(cumulative_errors + default_errors)
 
@@ -274,32 +340,35 @@ def build_classifier(rules, transactions, error_weights):
             break
 
     if not rule_list:
-        count_true    = sum(1 for t in transactions if t["label"])
-        count_false   = len(transactions) - count_true
-        default_label = count_true >= count_false
-        default_rule  = {"itemset": set(), "label": default_label, "default": True}
-
-        return [], default_rule
-
-    stopping_point = total_errors.index(min(total_errors))
-    pruned_rules   = rule_list[:stopping_point + 1]
-
-    # the first time, we used remaining_idx to get to the stopping point
-    # now we use it to determine the default label
-    remaining_idx = set(range(len(transactions)))
-
-    for rule in pruned_rules:
-        covered = [i for i in remaining_idx if rule_covers(rule, i)]
-        for i in covered:
-            remaining_idx.remove(i)
-
-    if remaining_idx:
-        count_true, count_false = count_labels_in_remainder(remaining_idx, transactions)
-    else:
+        # no rules were chosen, return global majority default rule
         count_true = sum(1 for t in transactions if t["label"])
-        count_false = len(transactions) - count_true
+        count_false = N - count_true
+        return [], {"itemset": set(), "label": count_true >= count_false, "default": True}
 
-    default_label = (count_true >= count_false)
+    # find the rule index that minimized total errors (Rule + Default)
+    best_idx = total_errors.index(min(total_errors))
+    pruned_rules = rule_list[:best_idx + 1]
+
+    # re-run coverage for pruned rules to see what's left for the default class
+    final_remaining = set(range(N))
+    for rule in pruned_rules:
+        items = list(rule["itemset"].items)
+        cov = vertical_index.get(items[0], set()).copy() if items else set(range(N))
+        for i in range(1, len(items)):
+            cov &= vertical_index.get(items[i], set())
+
+        final_remaining -= cov
+
+    # determine default label
+    if final_remaining:
+        final_true = sum(1 for i in final_remaining if transactions[i]["label"])
+        final_false = len(final_remaining) - final_true
+        default_label = (final_true >= final_false)
+    else:
+        # nothing left, use global majority label
+        total_true = sum(1 for t in transactions if t["label"])
+        default_label = total_true >= (N - total_true)
+
     default_rule = {"itemset": set(), "label": default_label, "default": True}
 
     return pruned_rules, default_rule

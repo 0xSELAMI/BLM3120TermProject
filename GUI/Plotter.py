@@ -8,7 +8,6 @@ from GUI.GUI import ForwardArgs
 
 class Plotter:
     def __init__(self, evaluators):
-        CommonLogger.logger.log("Hello")
         self.evaluators = evaluators
 
     def setup_args(self, args):
@@ -45,7 +44,7 @@ class Plotter:
             except StopIteration as e:
                 tmp = e.value
 
-                if len(tmp) != 7:
+                if not tmp or len(tmp) != 7:
                     CommonLogger.logger.log(f"[ERROR] plot_performances(): unexpected evaluator return value for {alg}")
                     return failure
                 else:
@@ -88,7 +87,7 @@ class Plotter:
             for bar in bars:
                 height = bar.get_height()
                 ax.text(bar.get_x() + bar.get_width()/2., height + 0.01,
-                        f'{height:.2f}', ha='center', va='bottom', fontsize=9)
+                        f'{height:.4f}', ha='center', va='bottom', fontsize=9)
 
             plt.tight_layout()
 
@@ -110,7 +109,7 @@ class Plotter:
             roc_auc_val = self.performances[alg]["roc_auc"]
 
             ax_roc.plot(fpr, tpr, color=self.colors[i], lw=2,
-                        label=f'{alg} (AUC = {roc_auc_val:.2f})')
+                        label=f'{alg} (AUC = {roc_auc_val:.4f})')
 
         # style
         ax_roc.plot([0, 1], [0, 1], color='navy', lw=1, linestyle='--') # Diagonal baseline

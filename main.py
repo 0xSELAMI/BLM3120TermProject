@@ -32,9 +32,9 @@ def create_process_dataset_argparser(parsers, subparsers):
     parsers["process_dataset"].add_argument("--trainset-outfile", metavar='TRAINSET_OUTPATH', help=f"default: {default_trainset_path}", default=default_trainset_path, type=str)
     parsers["process_dataset"].add_argument("--testset-outfile", metavar='TESTSET_OUTPATH', help=f"default: {default_testset_path}", default=default_testset_path, type=str)
 
-    parsers["process_dataset"].add_argument("--field-types", nargs="+", metavar='FIELD_TYPES', help=f"data types an instances of the dataset consist of, given sequentially. default: {default_field_types}", default=default_field_types, type=str)
+    parsers["process_dataset"].add_argument("--field-types", nargs="+", metavar='FIELD_TYPES', help=f"data types an instances of the dataset consist of, given sequentially and space seperated. default: {default_field_types}", default=default_field_types, type=str)
 
-    parsers["process_dataset"].add_argument("--ignore-indices", nargs="+", metavar='IGNORE_INDICES', help=f"field indices to exclude from resulting datasets, -1 includes everything. default: {default_ignore_indices}", default=default_ignore_indices, type=int)
+    parsers["process_dataset"].add_argument("--ignore-indices", nargs="+", metavar='IGNORE_INDICES', help=f"field indices to exclude from resulting datasets, space seperated. -1 includes everything. default: {default_ignore_indices}", default=default_ignore_indices, type=int)
 
     parsers["process_dataset"].add_argument("--label-idx", metavar='LABEL_IDX', help=f"default: {default_label_idx}", default=default_label_idx, type=int)
 
@@ -213,7 +213,4 @@ def main():
         parser.print_help()
 
 if __name__ == "__main__":
-    # TODO find 2 other classification datasets to try (?)
-    # TODO more comments
-    # TODO write report
     main()

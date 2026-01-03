@@ -55,15 +55,20 @@ class TransactionItemset:
         return self
 
     def __or__(self, other):
-        if isinstance(other, type(self)) or isinstance(other, set):
-            out = TransactionItemset(self.items)
+        out = {item.feature_name: item for item in self.items}
 
+        if isinstance(other, type(self)):
+            for item in other.items:
+                out[item.feature_name] = item
+
+        elif isinstance(other, set):
             for item in other:
-                out.add(item)
+                out[item.feature_name] = item
 
-            return out
         else:
             raise TypeError(f"unsupported operand type(s) for |: '{type(self).__name__}' and '{type(other).__name__}'")
+
+        return TransactionItemset(out.values())
 
     def __contains__(self, item):
         return item in self.items

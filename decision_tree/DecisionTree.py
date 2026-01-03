@@ -77,9 +77,10 @@ def build_decision_tree(args):
         root = yield from TreeBuilder.build_tree(trainset)
         CommonLogger.logger.update_last("Building decision tree... Completed Successfully")
         CommonLogger.logger.log("Collapsing pure subtrees into leaves...")
-        yield
 
         yield from TreeBuilder.collapse_pure_subtrees(root)
+
+        CommonLogger.logger.update_last("Collapsing pure subtrees into leaves... Completed Successfully")
 
         yield from DecisionTreeHelpers.export_tree_to_dot(root, args.dot_outfile)
         yield from CommonUtils.save_pickle(root, args.pickle_path, "decision tree")
@@ -117,6 +118,8 @@ def evaluate_decision_tree(args):
         lambda instance: getattr(instance, feature_names[-1]),
         predict_prob_instance
     )
+
+    CommonLogger.logger.log("")
 
     return metrics_data
 

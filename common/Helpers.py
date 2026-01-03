@@ -4,17 +4,23 @@ def calc_candidate_thresholds(dataset, feature_type):
     if not feature_type.is_numeric:
         raise ValueError(f"non-numeric feature type supplied to candidate threshold calculation: {feature_type}")
 
-    unique_values = set()
+    unique_values_and_labels = set()
 
     for instance in dataset.instances:
-        unique_values.add(getattr(instance, feature_type.name))
+        unique_values_and_labels.add((getattr(instance, feature_type.name),
+                                      instance.label))
 
-    unique_values = sorted(unique_values)
+    unique_values_and_labels = sorted(unique_values_and_labels, key = lambda x: x[0])
 
     candidates = []
 
-    for i in range(len(unique_values) - 1):
-        candidates.append( round((unique_values[i] + unique_values[i + 1]) / 2, 6) )
+    for i in range(len(unique_values_and_labels) - 1):
+        v1, l1 = unique_values_and_labels[i]
+        v2, l2 = unique_values_and_labels[i + 1]
+
+        if l1 != l2 and v1 < v2:
+            threshold = round((v1 + v2) / 2, 6)
+            candidates.append( threshold )
 
     return candidates
 
@@ -140,7 +146,7 @@ def get_metrics(predictions, labels, learning_output, dataset, dataset_property_
         return [None] * 5
 
     roc_auc = calc_roc_auc(*values_and_probs)
-    CommonLogger.logger.log(f"ROC-AUC: {round(roc_auc, 4)}\n")
+    CommonLogger.logger.log(f"ROC-AUC: {round(roc_auc, 4)}")
     yield
 
     y_labels, y_probs = values_and_probs

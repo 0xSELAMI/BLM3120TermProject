@@ -52,6 +52,10 @@ def build_naive_bayesian_classifier(args):
             return
 
         threshold_map = yield from Discretizer.best_thresholds_for_features(trainset, args.max_split_count, args.min_bin_frac, args.delta_cost)
+
+        if not threshold_map:
+            return
+
         transactions = apply_thresholds(trainset, threshold_map)
 
         probability_table = {}
@@ -95,6 +99,9 @@ def evaluate_naive_bayesian_classifier(args):
         threshold_map     = pickled_data["threshold_map"]
         label_counts      = pickled_data["label_counts"]
 
+        if not threshold_map:
+            return
+
         transactions =  apply_thresholds(testset, threshold_map)
 
         predictions  =  CommonHelpers.predict_dataset (
@@ -109,6 +116,9 @@ def evaluate_naive_bayesian_classifier(args):
         metrics_data = yield from CommonHelpers.get_metrics(
                 predictions, [t["label"] for t in transactions], probability_table, transactions,
                 None, lambda transaction: transaction["label"], prediction_probability_true, label_counts)
+
+
+        CommonLogger.logger.log("")
 
         return metrics_data
 

@@ -87,7 +87,16 @@ class Dataset(DatasetSchema):
                     field_name = field_names[i]
                     field_type = self.feature_types[field_name].value
 
-                    instance_dict[field_name] = field_type(int(f)) if field_type == bool else field_type(f)
+                    as_bool = None
+
+                    if f == 'No' or f == 'no' or f == 'NO' or f == 'False' or f == 'false' or f == 'FALSE' or f == 0 or f == '0':
+                        as_bool = False
+                    elif f == 'Yes' or f == 'yes' or f == 'YES' or f == 'True' or f == 'true' or f == 'TRUE' or f == 1 or f == '1':
+                        as_bool = True
+                    elif field_type == bool:
+                        raise ValueError("[ERROR] field type was specified bool but data couldn't be interpreted as such")
+
+                    instance_dict[field_name] = field_type(as_bool) if field_type == bool else field_type(f)
 
                 self.instances.append(Instance(instance_dict, self.label_idx))
 
@@ -145,7 +154,7 @@ class Dataset(DatasetSchema):
 
     def calc_majority_label(self):
         # majority label: [0] is value, [1] is count of value
-        counts = Counter(getattr(inst, list(self.feature_types.keys())[-1]) for inst in self.instances)
+        counts = Counter(inst.label for inst in self.instances)
         return counts.most_common()[0]
 
     def calc_binary_label_entropy(self, weights):
@@ -164,7 +173,7 @@ class Dataset(DatasetSchema):
         return 2 * p * (1 - p)
     
     def calc_positive_counts(self):
-        labels = [1 if instance.is_churned else 0 for instance in self.instances]
+        labels = [1 if instance.label else 0 for instance in self.instances]
 
         pos = [0] * (len(labels) + 1)
 
