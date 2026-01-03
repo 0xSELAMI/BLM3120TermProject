@@ -9,29 +9,6 @@ import common.Logger as CommonLogger
 MIN_SAMPLES_LEAF = None
 MIN_SAMPLES_LEAF_KARY = None
 
-def calc_info_gain_on_binary_split(parentset, feature_filter, use_gini=False):
-    right = Dataset.subset_with_feature_filter(parentset, [feature_filter])
-    left = Dataset.subset_with_feature_filter(parentset, [feature_filter._not()])
-
-    if left.is_empty or right.is_empty:
-        return 0.0
-    if left.size < MIN_SAMPLES_LEAF or right.size < MIN_SAMPLES_LEAF:
-        return 0.0
-
-    w_left = left.size / parentset.size
-    w_right = right.size / parentset.size
-
-    gain = None
-
-    if (use_gini):
-        weighted_child_gini = w_left * left.gini + w_right * right.gini
-        gain = parentset.gini - weighted_child_gini
-    else:
-        weighted_child_entropy = w_left * left.entropy + w_right * right.entropy
-        gain = parentset.entropy - weighted_child_entropy
-    
-    return gain
-
 def calc_info_gain_on_kary_split(parentset, feature_type, use_gini=False):
     value_domain = None
 
@@ -124,7 +101,7 @@ def evaluate_info_gains(dataset, use_gini=False):
             r_pos, r_neg = count_pos, count_neg
 
             for i in range(dataset.size - 1):
-                # Update counters as we "move" the split point to the right
+                # update counters while moving split point to the right
                 if sorted_instances[i].label == True:
                     l_pos += 1
                     r_pos -= 1
@@ -136,7 +113,7 @@ def evaluate_info_gains(dataset, use_gini=False):
                 val_next = getattr(sorted_instances[i+1], fname)
 
                 if sorted_instances[i].label != sorted_instances[i+1].label and val_curr < val_next:
-                    # Calculate gain using just the 4 integers (No new Dataset objects!)
+                    # calculate gain using pos,neg counts from left of the split and right of the split
                     gain = calculate_gain_from_counts(
                         l_pos, l_neg, r_pos, r_neg,
                         dataset.entropy if not use_gini else dataset.gini,

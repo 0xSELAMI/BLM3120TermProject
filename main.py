@@ -154,6 +154,7 @@ def main():
     if args.command == "GUI":
         from GUI.GUI import GUI
 
+        # to plot performance comparisons
         plotter = run_task(Plotter,
                            {"decision_tree": evaluate_decision_tree, 
                            "CBA": evaluate_CARs,

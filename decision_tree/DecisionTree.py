@@ -31,6 +31,7 @@ def predict(instance, node):
 
     return predict(instance, child_node)
 
+# probability that an instance label is true
 def predict_prob_instance(root_node, instance):
     node = root_node
     while not node.is_leaf:
@@ -127,7 +128,7 @@ def visualize_decision_tree(args):
     import graphviz
     import GUI.decision_tree_visualizer as visualizer
 
-    # Load and convert dot to SVG string
+    # load and convert dot to SVG string
     src = graphviz.Source.from_file(args.dotfile)
     svg_data = src.pipe(format='svg').decode('utf-8')
 

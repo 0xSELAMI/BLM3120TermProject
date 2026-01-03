@@ -123,6 +123,4 @@ def collapse_pure_subtrees(node):
     # all samples in scope have the same label
     node.n_pred = node.n_samples
 
-    # yield
-
     return {pred}

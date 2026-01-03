@@ -144,7 +144,6 @@ def visualize_naive_bayesian_classifier(args):
             for label in probability_table[fname][fval]:
                 prob_table_arr.append({"fname": fname, "fval": fval, "label": label, "prob": probability_table[fname][fval][label] / label_counts[label]})
 
-    #prob_table_arr.sort(key=lambda x: (x["fval"], -x["prob"], x["fname"], x["label"])) 
     prob_table_arr.sort(key=lambda x: (-x["prob"], x["fval"], x["label"])) 
 
     for entry in prob_table_arr:
