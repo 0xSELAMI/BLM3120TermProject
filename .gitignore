@@ -3,5 +3,4 @@
 **/__pycache__
 notes.txt
 env/*
-*.png
 *.dot
