@@ -21,6 +21,11 @@ elif f == 'Yes' or f == 'yes' or f == 'YES' or f == 'True' or f == 'true' or f =
     as_bool = True
 ```
 
+## Requirements
+- python3
+- dot (GUI uses python's graphviz module to render the decision tree)
+
+
 ## Installation
 ```
 git clone https://github.com/0xSELAMI/BLM3120TermProject
@@ -29,7 +34,6 @@ python3 -m venv env
 source env/bin/activate
 ./main.py ... -- ready to use
 ```
-
 
 ## Usage
 
