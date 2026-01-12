@@ -32,6 +32,7 @@ git clone https://github.com/0xSELAMI/BLM3120TermProject
 cd BLM3120TermProject
 python3 -m venv env
 source env/bin/activate
+pip install -r requirements.txt
 ./main.py ... -- ready to use
 ```
 
